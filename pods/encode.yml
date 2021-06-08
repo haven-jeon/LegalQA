@@ -1,0 +1,7 @@
+!KoBARTEncoder
+metas:
+  py_modules: custom_executors_sentencekobart.py
+requests:
+  on:
+    [IndexRequest, SearchRequest]:
+      - !EncodeDriver {}

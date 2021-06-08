@@ -1,0 +1,16 @@
+manifest_version: 1
+name: Law QA
+description: 'Your description'
+author: Heewon Jeon (madjakarta@gmail.com)
+url: https://github.com/haven-jeon
+vendor: Your company
+documentation: https://your.url
+version: 0.0.1
+license: apache-2.0
+keywords: [NLP, text, KoBART, example, transformers]
+type: app
+kind: example
+avatar: None
+platform: "linux/amd64"
+update: "None
+"

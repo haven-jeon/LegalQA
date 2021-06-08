@@ -1,0 +1,14 @@
+!Flow
+version: '1'
+pods:
+  - name: segmenter
+    show_exc_info: true
+    uses: pods/segment.yml
+    read_only: true
+  - name: encoder
+    uses: pods/encode.yml
+    timeout_ready: 1200000
+    read_only: true
+  - name: chunk_indexer
+    uses: pods/index.yml
+
