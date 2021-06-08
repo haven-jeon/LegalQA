@@ -34,7 +34,6 @@ import numpy as np
 from jina.executors.decorators import batching, as_ndarray
 from jina.executors.encoders import BaseEncoder
 from jina.executors.encoders.frameworks import BaseTorchEncoder
-from jina.executors.devices import TorchDevice
 import pandas as pd
 import numpy as np
 import torch
@@ -60,6 +59,11 @@ parser.add_argument('--checkpoint_path',
                     type=str,
                     help='checkpoint path')
 
+parser.add_argument('--avg_type',
+                    type=str,
+                    default='norm_avg',
+                    help='norm_avg or avg')
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -80,7 +84,7 @@ class KoBARTEncoder(BaseTorchEncoder):
     def post_init(self):
         """Load Model."""
         super().post_init()
-        self.model = KoBARTClassification.load_from_checkpoint('kosenbart.ckpt')
+        self.model = KoBARTClassification.load_from_checkpoint('kosenbart.ckpt', hparams={'avg_type':'avg'})
         self.tokenizer = get_kobart_tokenizer()
         self.model.eval()
         self.to_device(self.model)
@@ -306,18 +310,22 @@ class KoBARTClassification(BaseModule):
     def forward(self, input_ids, attention_mask):
         return self.model(input_ids=input_ids, attention_mask=attention_mask, return_dict=True)
 
-    def _get_encoding(self, input_ids, attention_mask):
-        outs = self(input_ids, attention_mask)
-        lengths = attention_mask.sum(dim=1)
-        mask_3d = attention_mask.unsqueeze(dim=-1).repeat_interleave(repeats=self.model.config.d_model, dim=2)
+    def _get_encoding(self, input_ids, attention_mask, typ='norm_avg'):
+        if typ == 'norm_avg':
+            outs = self(input_ids, attention_mask)
+            lengths = attention_mask.sum(dim=1)
+            mask_3d = attention_mask.unsqueeze(dim=-1).repeat_interleave(repeats=self.model.config.d_model, dim=2)
 
-        masked_encoder_out = (outs['last_hidden_state'] * mask_3d).sum(dim=1)
-        # to avoid 0 division 
-        norm_encoder_out = masked_encoder_out / (lengths + 1).unsqueeze(dim=1)
-        return norm_encoder_out
+            masked_encoder_out = (outs['last_hidden_state'] * mask_3d).sum(dim=1)
+            # to avoid 0 division 
+            norm_encoder_out = masked_encoder_out / (lengths + 1).unsqueeze(dim=1)
+            return norm_encoder_out
+        elif typ == 'avg':
+            last_hidden = self(input_ids, attention_mask)['last_hidden_state']
+            return torch.mean(last_hidden, dim=1)
 
     def encoding(self, input_ids, attention_mask):
-        return self.pooling(self._get_encoding(input_ids, attention_mask))
+        return self.pooling(self._get_encoding(input_ids, attention_mask, typ=self.hparams.avg_type))
 
     def _step(self, batch):
         p_input_ids= batch['p_input_ids']
@@ -325,8 +333,8 @@ class KoBARTClassification(BaseModule):
         h_input_ids= batch['h_input_ids']
         h_attention_mask = batch['h_attention_mask']
         # encode of premise [batch, 768]
-        p_encoding = self._get_encoding(p_input_ids, p_attention_mask)
-        h_encoding = self._get_encoding(h_input_ids, h_attention_mask)
+        p_encoding = self._get_encoding(p_input_ids, p_attention_mask, typ=self.hparams.avg_type)
+        h_encoding = self._get_encoding(h_input_ids, h_attention_mask, typ=self.hparams.avg_type)
         u = self.pooling(p_encoding)
         v = self.pooling(h_encoding)
         logits = self.classification(torch.cat((u, v, torch.abs(u - v)), dim=1))
