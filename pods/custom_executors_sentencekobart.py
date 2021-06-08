@@ -33,6 +33,8 @@ import numpy as np
 
 from jina.executors.decorators import batching, as_ndarray
 from jina.executors.encoders import BaseEncoder
+from jina.executors.encoders.frameworks import BaseTorchEncoder
+from jina.executors.devices import TorchDevice
 import pandas as pd
 import numpy as np
 import torch
@@ -63,21 +65,25 @@ logger.setLevel(logging.INFO)
 
 
 
-class KoBARTEncoder(BaseEncoder):
+class KoBARTEncoder(BaseTorchEncoder):
     """
     """
 
     def __init__(
-        self, max_len: int=128, device: str='cpu', n_hidden: int=768,
+        self, max_len: int=128, n_hidden: int=768,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.model = KoBARTClassification.load_from_checkpoint('kosenbart.ckpt')
-        #self.model = BartModel.from_pretrained('qa_model/') # BartModel.from_pretrained(get_pytorch_kobart_model())
-        self.model.eval()
-        self.tokenizer = get_kobart_tokenizer()
         self.max_len = max_len
+
+    def post_init(self):
+        """Load Model."""
+        super().post_init()
+        self.model = KoBARTClassification.load_from_checkpoint('kosenbart.ckpt')
+        self.tokenizer = get_kobart_tokenizer()
+        self.model.eval()
+        self.to_device(self.model)
 
     @batching
     @as_ndarray
@@ -94,10 +100,13 @@ class KoBARTEncoder(BaseEncoder):
         input_tensors = self.tokenizer(list(processed_content), return_tensors='pt',
                                        max_length=self.max_len, padding=True)
         with torch.no_grad():
-            embedding = self.model.encoding(input_tensors['input_ids'], input_tensors['attention_mask'])
+            if self.on_gpu:
+                embedding = self.model.encoding(input_tensors['input_ids'].cuda(), input_tensors['attention_mask'].cuda())
+            else:
+                embedding = self.model.encoding(input_tensors['input_ids'], input_tensors['attention_mask'])
         return embedding.cpu().detach().numpy()
 
-    
+
 
 class ArgsBase():
     @staticmethod

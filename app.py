@@ -7,7 +7,7 @@ import click
 from jina.flow import Flow
 
 
-MAX_DOCS = int(os.environ.get("JINA_MAX_DOCS", 50))
+MAX_DOCS = int(os.environ.get("JINA_MAX_DOCS", 200))
 
 
 def config():
@@ -28,7 +28,7 @@ def print_topk(resp, sentence):
             if score < 0.0:
                 continue
             answer = match.tags['answer']
-            print(f'> {idx:>2d}({score:.2f}). {answer} : {match.text}')
+            print(f'> {idx:>2d}({score:.2f}).{match.text} ::  {answer}')
 
 
 def index(num_docs):

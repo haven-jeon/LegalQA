@@ -1,5 +1,7 @@
 !KoBARTEncoder
 metas:
+  # batch_size: 256
+  # on_gpu: True
   py_modules: custom_executors_sentencekobart.py
 requests:
   on:

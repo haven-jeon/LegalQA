@@ -1,6 +1,6 @@
 !Sentencizer
 with:
   min_sent_len: 2
-  #max_sent_len: 32
-  punct_chars: '.!?'
+  max_sent_len: 128
+  punct_chars: ':.!?'
 
