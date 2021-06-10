@@ -84,7 +84,7 @@ class KoBARTEncoder(BaseTorchEncoder):
     def post_init(self):
         """Load Model."""
         super().post_init()
-        self.model = KoBARTClassification.load_from_checkpoint('kosenbart.ckpt', hparams={'avg_type':'avg'})
+        self.model = KoBARTClassification.load_from_checkpoint('kosenbart.ckpt', hparams={'avg_type':'norm_avg'})
         self.tokenizer = get_kobart_tokenizer()
         self.model.eval()
         self.to_device(self.model)
