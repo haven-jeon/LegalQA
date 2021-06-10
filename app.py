@@ -16,7 +16,7 @@ def config():
     )
     os.environ["JINA_WORKSPACE"] = os.environ.get("JINA_WORKSPACE", "workspace")
 
-    os.environ["JINA_PORT"] = os.environ.get("JINA_PORT", str(7875))
+    os.environ["JINA_PORT"] = os.environ.get("JINA_PORT", str(1234))
 
 
 def print_topk(resp, sentence):
@@ -28,7 +28,7 @@ def print_topk(resp, sentence):
             if score < 0.0:
                 continue
             answer = match.tags['answer']
-            print(f'> {idx:>2d}({score:.2f}).{match.text} ::  {answer}')
+            print(f'> Rank : {idx:>2d}({score:.2f})\nTitle: {match.text}\nAnswer: {answer}\n')
 
 
 def index(num_docs):
@@ -75,7 +75,7 @@ def dryrun():
     ),
 )
 @click.option("--num_docs", "-n", default=MAX_DOCS)
-@click.option("--top_k", "-k", default=5)
+@click.option("--top_k", "-k", default=3)
 def main(task, num_docs, top_k):
     config()
     workspace = os.environ["JINA_WORKSPACE"]
