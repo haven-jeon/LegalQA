@@ -32,6 +32,7 @@ from typing import Optional, Dict
 import numpy as np
 
 from jina.executors.decorators import batching, as_ndarray
+from jina.executors.encoders import BaseEncoder
 from jina.executors.encoders.frameworks import BaseTorchEncoder
 import pandas as pd
 import numpy as np
@@ -83,6 +84,7 @@ class KoBARTEncoder(BaseTorchEncoder):
     def post_init(self):
         """Load Model."""
         super().post_init()
+        # self.model = KoBARTClassification.load_from_checkpoint('kosenbart.ckpt', hparams={'avg_type': 'norm_avg'})
         self.model = KoBARTClassification.load_from_checkpoint('kosenbart_avg.ckpt', hparams={'avg_type': 'avg'})
         self.tokenizer = get_kobart_tokenizer()
         self.model.eval()

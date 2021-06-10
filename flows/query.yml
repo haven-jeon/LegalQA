@@ -6,7 +6,7 @@ with:
 pods:
   - name: encoder
     uses: pods/encode.yml
-    timeout_ready: 60000
+    timeout_ready: 1000000
     read_only: true
   - name: chunk_indexer
     uses: pods/index.yml

@@ -1,10 +1,16 @@
-# Simple LegalQA with KoBART and jina
+# Korean LegalQA using Neural Search
 
-Sentence-KoBART 모델을 기반으로 하는 Neural Search Engine 기반의 QA 예제
+| ![](data/demo.gif)|
+| ------ |
 
-- [Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks](https://arxiv.org/abs/1908.10084)  (EMNLP 2019) 기반 KoBART 튜닝(_실험중_)
-- Neural Search Engine Jina 기반의 서치 플랫폼 구현
-- 법률 QA 데이터 수집(156 쌍)
+Sentence-KoBART 모델을 기반으로 하는 Neural Search Engine 기반의 QA 예제 구현
+
+- [Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks](https://arxiv.org/abs/1908.10084)  활용 KoBART 튜닝(_실험중_)
+- Neural Search Engine [Jina](https://github.com/jina-ai/jina) 활용
+- 법률 QA 데이터 수집(156 pairs)
+
+
+
 
 ## Setup
 
