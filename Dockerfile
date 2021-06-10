@@ -5,21 +5,19 @@ WORKDIR /workspace
 
 RUN pip install -r requirements.txt
 
-RUN python -c "from transformers import DistilBertModel, DistilBertTokenizer; x='distilbert-base-cased'; DistilBertModel.from_pretrained(x); DistilBertTokenizer.from_pretrained(x)"
-
 ENTRYPOINT ["python", "app.py", "-t", "query_restful"]
 
-LABEL author="Your name (email)"
+LABEL author="madjakarta@gmail.com"
 LABEL type="app"
-LABEL kind="example"
+LABEL kind="QA"
 LABEL avatar="None"
-LABEL description="Your description"
-LABEL documentation="http://your.url"
-LABEL keywords="[NLP, text, distilbert, example]"
+LABEL description="LegalQA for Korean"
+LABEL documentation="https://github.com/haven-jeon/LegalQA.git"
+LABEL keywords="[NLP, text, QA, KoBERT]"
 LABEL license="apache-2.0"
-LABEL name="project name"
+LABEL name="LegalQA"
 LABEL platform="linux/amd64"
 LABEL update="None"
-LABEL url="http://your.url"
-LABEL vendor="Your company"
+LABEL url="https://github.com/haven-jeon/LegalQA.git"
+LABEL vendor="gogamza"
 LABEL version="0.0.1"
