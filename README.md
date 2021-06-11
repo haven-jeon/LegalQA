@@ -10,8 +10,6 @@ Sentence-KoBART 모델을 기반으로 하는 Neural Search Engine 기반의 QA 
 - 법률 QA 데이터 수집(156 pairs)
 
 
-
-
 ## Setup
 
 ```sh

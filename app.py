@@ -2,6 +2,7 @@ __copyright__ = "Copyright (c) 2021 Heewon Jeon and Jina"
 __license__ = "Apache-2.0"
 
 import os
+import json
 
 import click
 from jina.flow import Flow
@@ -30,13 +31,21 @@ def print_topk(resp, sentence):
             answer = match.tags['answer']
             print(f'> Rank : {idx:>2d}({score:.2f})\nTitle: {match.text}\nAnswer: {answer}\n')
 
+def _pre_processing(texts):
+    print('start of pre-processing')
+    results = []
+    for i in texts:
+        d = json.loads(i)
+        d['text'] = d['title'] + 'Ж' + d['question']
+        results.append(json.dumps(d, ensure_ascii=False))
+    return results
 
 def index(num_docs):
     f = Flow().load_config("flows/index.yml")
 
     with f:
         data_path = os.path.join(os.path.dirname(__file__), os.environ.get('JINA_DATA_FILE', None))
-        f.index_lines(filepath=data_path, line_format='json', field_resolver={'id': 'id', 'text': 'text'})
+        f.index_lines(lines=_pre_processing(open(data_path, 'rt').readlines()), line_format='json', field_resolver={'id': 'id', 'text': 'text'})
 
 
 def query(top_k):

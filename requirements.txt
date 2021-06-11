@@ -6,3 +6,4 @@ torchmetrics == 0.2.0
 git+https://github.com/SKT-AI/KoBART@no_version_deps#egg=kobart
 torch==1.8.1
 jina[scipy, http]==1.3.0
+streamlit
