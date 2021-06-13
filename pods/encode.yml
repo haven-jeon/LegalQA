@@ -5,5 +5,8 @@ metas:
   py_modules: custom_executors_sentencekobart.py
 requests:
   on:
-    [IndexRequest, SearchRequest]:
-      - !EncodeDriver {}
+    [SearchRequest, IndexRequest]:
+      with:
+        traversal_paths: ['c']
+      drivers:
+        - jtype: EncodeDriver {}    # we need EncodeDriver for encoder

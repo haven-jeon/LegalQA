@@ -11,4 +11,10 @@ pods:
     read_only: true
   - name: chunk_indexer
     uses: pods/index.yml
+  - name: doc_indexer
+    uses: pods/doc.yml
+    needs: gateway
+  - name: join_all
+    uses: _pass
+    needs: [doc_indexer, chunk_indexer]
 

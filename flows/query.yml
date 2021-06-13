@@ -4,10 +4,19 @@ with:
   read_only: true
   port_expose: $JINA_PORT
 pods:
+  - name: segmenter
+    show_exc_info: true
+    uses: pods/segment.yml
+    read_only: true
   - name: encoder
     uses: pods/encode.yml
     timeout_ready: 1000000
     read_only: true
   - name: chunk_indexer
     uses: pods/index.yml
- 
+  - name: ranker
+    show_exc_info: true
+    uses: pods/ranker.yml
+  - name: doc_indexer
+    show_exc_info: true
+    uses: pods/doc.yml

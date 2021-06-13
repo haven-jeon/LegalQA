@@ -1,10 +1,10 @@
 !SimpleAggregateRanker
 with:
-  aggregate_function: 'min'
-  is_reversed_score: true
+  aggregate_function: 'mean'
+  inverse_score: True
 requests:
   on:
     ControlRequest:
-      - !ControlReqDriver {}
+      - jtype: ControlReqDriver {}
     SearchRequest:
-      - !Chunk2DocRankDriver {}
+      - jtype: Chunk2DocRankDriver {}

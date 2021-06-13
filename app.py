@@ -8,7 +8,7 @@ import click
 from jina.flow import Flow
 
 
-MAX_DOCS = int(os.environ.get("JINA_MAX_DOCS", 200))
+MAX_DOCS = int(os.environ.get("JINA_MAX_DOCS", 2000))
 
 
 def config():
@@ -36,7 +36,7 @@ def _pre_processing(texts):
     results = []
     for i in texts:
         d = json.loads(i)
-        d['text'] = d['title'] + 'Ж' + d['question']
+        d['text'] = d['title'] + '.' + d['question']
         results.append(json.dumps(d, ensure_ascii=False))
     return results
 

@@ -3,7 +3,7 @@ components:
   - !NumpyIndexer
     with:
       index_filename: vec.gz
-      metric: cosine
+      metric: euclidean
     metas:
       name: vecidx
   - !BinaryPbIndexer
@@ -20,18 +20,18 @@ requests:
       - !VectorIndexDriver
         with:
           executor: vecidx
-          traversal_paths: ['r']
+          traversal_paths: ['c']
       - !KVIndexDriver
         with:
           executor: docidx
-          traversal_paths: ['r']
+          traversal_paths: ['c']
     [SearchRequest]:
       - !VectorSearchDriver
         with:
           executor: vecidx
           top_k: 10
-          traversal_paths: ['r']
+          traversal_paths: ['c']
       - !KVSearchDriver
         with:
           executor: docidx
-          traversal_paths: ['m']
+          traversal_paths: ['cm']
