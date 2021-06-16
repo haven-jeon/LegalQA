@@ -1,8 +1,8 @@
 !KoBARTRegEncoder
 metas:
-  #batch_size: 32
-  #on_gpu: True
-  py_modules: custom_executors_sentencekobart.py
+  # batch_size: 32
+  on_gpu: false
+  py_modules: sentencekobart.py
 requests:
   on:
     [SearchRequest, IndexRequest]:
