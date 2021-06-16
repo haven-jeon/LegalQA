@@ -23,7 +23,7 @@ pip install -r requirements.txt
 python app.py -t index
 ```
 
-![](index.svg)
+![](data/index.svg)
 
 `pods/encoder.yml` - `on_gpu: true` 옵션으로 GPU 기반 인덱싱 가능 
 
@@ -37,7 +37,7 @@ To start the Jina server for REST API:
 python app.py -t query_restful
 ```
 
-![](query.svg)
+![](data/query.svg)
 
 Then use a client to query:
 
