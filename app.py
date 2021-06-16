@@ -12,7 +12,7 @@ MAX_DOCS = int(os.environ.get("JINA_MAX_DOCS", 2000))
 
 def config():
     os.environ["JINA_DATA_FILE"] = os.environ.get(
-        "JINA_DATA_FILE", "data/input.jsonlines"
+        "JINA_DATA_FILE", "data/legalqa.jsonlines"
     )
     os.environ["JINA_WORKSPACE"] = os.environ.get("JINA_WORKSPACE", "workspace")
 
