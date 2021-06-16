@@ -1,5 +1,4 @@
-__copyright__ = "Copyright (c) 2021 Heewon Jeon and Jina"
-__license__ = "Apache-2.0"
+__copyright__ = "Copyright (c) 2021 Heewon Jeon"
 
 import os
 import json
@@ -36,12 +35,12 @@ def _pre_processing(texts):
     results = []
     for i in texts:
         d = json.loads(i)
-        d['text'] = d['title'] + '.' + d['question']
+        d['text'] = d['title'].strip() + '. ' + d['question']
         results.append(json.dumps(d, ensure_ascii=False))
     return results
 
 def index(num_docs):
-    f = Flow().load_config("flows/index.yml")
+    f = Flow().load_config("flows/index.yml").plot(output='index.svg')
 
     with f:
         data_path = os.path.join(os.path.dirname(__file__), os.environ.get('JINA_DATA_FILE', None))
@@ -49,7 +48,7 @@ def index(num_docs):
 
 
 def query(top_k):
-    f = Flow().load_config("flows/query.yml")
+    f = Flow().load_config("flows/query.yml").plot(output='query.svg')
     with f:
         while True:
             text = input("Please type a sentence: ")

@@ -1,9 +1,8 @@
-!Sentencizer
+jtype: KSSSentencizer
 with:
-  min_sent_len: 2
-  max_sent_len: 128
-  uniform_weight: true
-  punct_chars: "?!."
+  safe: false
+metas:
+  py_modules: kss_segment.py
 requests:
   use_default: true
   on:

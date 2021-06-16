@@ -19,10 +19,12 @@ pip install -r requirements.txt
 
 ## Index
 
+
 ```sh
 python app.py -t index
 ```
 
+![](index.svg)
 ## Search
 
 ### With REST API
@@ -32,6 +34,8 @@ To start the Jina server for REST API:
 ```sh
 python app.py -t query_restful
 ```
+
+![](query.svg)
 
 Then use a client to query:
 

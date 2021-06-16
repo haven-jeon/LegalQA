@@ -1,7 +1,7 @@
 !KoBARTRegEncoder
 metas:
-  batch_size: 32
-  on_gpu: True
+  #batch_size: 32
+  #on_gpu: True
   py_modules: custom_executors_sentencekobart.py
 requests:
   on:
@@ -9,4 +9,4 @@ requests:
       with:
         traversal_paths: ['c']
       drivers:
-        - jtype: EncodeDriver {}    # we need EncodeDriver for encoder
+        - jtype: EncodeDriver {}

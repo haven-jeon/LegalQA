@@ -25,7 +25,7 @@ requests:
         with:
           executor: docidx
           traversal_paths: ['c']
-    [SearchRequest]:
+    SearchRequest:
       - !VectorSearchDriver
         with:
           executor: vecidx

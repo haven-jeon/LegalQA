@@ -3,7 +3,7 @@ version: '1'
 pods:
   - name: segmenter
     show_exc_info: true
-    uses: pods/segment.yml
+    uses: pods/ko_segment.yml
     read_only: true
   - name: encoder
     uses: pods/encode.yml

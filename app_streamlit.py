@@ -102,7 +102,7 @@ class jina:
             if "endpoint" not in hidden:
                 endpoint = st.text_input("Endpoint", endpoint)
 
-            query = st.text_input("Enter query")
+            query = st.text_input("Enter query", value='조의금 소유는 누가 하는건가요?')
 
             if "top_k" not in hidden:
                 top_k = st.slider("Results", 1, top_k, int(top_k / 2))
@@ -149,4 +149,4 @@ endpoint = "http://0.0.0.0:1234/api/search"
 st.title("LegalQA with KoBART")
 st.markdown("")
 
-jina.text_search(endpoint=endpoint)
+jina.text_search(endpoint=endpoint, hidden=['endpoint'])
