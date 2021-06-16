@@ -1,4 +1,6 @@
-## SentenceKoBART
+# SentenceKoBART
+
+![](../data/sbart.png)
 
 [Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks](https://arxiv.org/abs/1908.10084) 논문에서 아이디어 착안, BART의 인코더 성능을 활용한다. 
 
