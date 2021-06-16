@@ -77,5 +77,5 @@ howpublished = {\url{https://github.com/haven-jeon/LegalQA}}
 
 ## License
 
-- QA 데이터인 `data/legalqa.jsonlines`는 [FREELAWFIRM](http://www.freelawfirm.co.kr/lawqnainfo)에서 `robots.txt`에 준거하여 크롤링한 데이터이며 학술적인 용도 이외에 상업적인 이용은 할 수 없습니다.(`CC BY-NC-SA 4.0`)
+- QA 데이터인 `data/legalqa.jsonlines`는 [www.freelawfirm.co.kr](http://www.freelawfirm.co.kr/lawqnainfo)에서 `robots.txt`에 준거하여 크롤링한 데이터이며 학술적인 용도 이외에 상업적인 이용은 할 수 없습니다.(`CC BY-NC-SA 4.0`)
 - 이곳에서 제공하는 리소스를 활용해 법률적 판단을 하는것에 대해서 어떠한 책임도 지지 않습니다.
