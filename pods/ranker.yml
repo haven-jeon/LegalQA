@@ -1,6 +1,6 @@
 !SimpleAggregateRanker
 with:
-  aggregate_function: 'mean'
+  aggregate_function: 'min'
   inverse_score: True
 requests:
   on:

@@ -41,7 +41,7 @@ from torch.nn import CrossEntropyLoss
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 import pytorch_lightning as pl
-from torchmetrics import Accuracy
+from torchmetrics import Accuracy, PearsonCorrcoef, SpearmanCorrcoef
 from pytorch_lightning import loggers as pl_loggers
 from transformers.optimization import AdamW, get_cosine_schedule_with_warmup
 from transformers import BartModel
@@ -66,6 +66,51 @@ parser.add_argument('--avg_type',
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+
+
+class KoBARTRegEncoder(BaseTorchEncoder):
+    """
+    """
+
+    def __init__(
+        self, max_len: int=128, n_hidden: int=768,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.max_len = max_len
+
+    def post_init(self):
+        """Load Model."""
+        super().post_init()
+        # self.model = KoBARTClassification.load_from_checkpoint('kosenbart.ckpt', hparams={'avg_type': 'norm_avg'})
+        self.model = KoBARTRegression.load_from_checkpoint('kobart_stt_finetuned_norm_avg.ckpt', hparams={'avg_type': 'norm_avg'})
+        self.tokenizer = get_kobart_tokenizer()
+        self.model.eval()
+        self.to_device(self.model)
+
+    @batching
+    @as_ndarray
+    def encode(self, content: 'np.ndarray', *args, **kwargs) -> 'np.ndarray':
+        """
+        Encode an array of string in size `B` into an ndarray in size `B x D`,
+        where `B` is the batch size and `D` is the dimensionality of the encoding.
+        :param content: a 1d array of string type in size `B`
+        :return: an ndarray in size `B x D` with the embeddings
+        """
+        processed_content = []
+        for cont in content:
+            processed_content.append(self.tokenizer.bos_token + cont + self.tokenizer.eos_token)
+        input_tensors = self.tokenizer(list(processed_content), return_tensors='pt',
+                                       max_length=self.max_len, padding=True)
+        with torch.no_grad():
+            if self.on_gpu:
+                embedding = self.model.encoding(input_tensors['input_ids'].cuda(), input_tensors['attention_mask'].cuda())
+            else:
+                embedding = self.model.encoding(input_tensors['input_ids'], input_tensors['attention_mask'])
+        return embedding.cpu().detach().numpy()
+
 
 
 
@@ -160,7 +205,7 @@ class NLIDataset(Dataset):
             encoder_input_id = encoder_input_id[:self.max_seq_len - 1] + [
                 self.tokenizer.eos_token_id]
             attention_mask = attention_mask[:self.max_seq_len]
-        return  np.array(encoder_input_id, dtype=np.int_), np.array(attention_mask, dtype=np.float32)
+        return np.array(encoder_input_id, dtype=np.int_), np.array(attention_mask, dtype=np.float32)
 
     def __getitem__(self, index):
         record = self.data.iloc[index]
@@ -174,7 +219,6 @@ class NLIDataset(Dataset):
                 'h_input_ids': h_input_ids,
                 'h_attention_mask': h_attention_mask,
                 'labels': np.array(self.label_to_int[label], dtype=np.int_)}
-
 
 class NLIDataModule(pl.LightningDataModule):
     def __init__(self, train_file,
@@ -220,6 +264,91 @@ class NLIDataModule(pl.LightningDataModule):
                                num_workers=5, shuffle=False)
         return nli_test
 
+
+class STSDataset(Dataset):
+
+    def __init__(self, filepath=None, max_seq_len=128):
+        self.filepath = filepath
+        if self.filepath:
+            self.data = pd.read_csv(self.filepath, sep='\t').dropna()
+        self.max_seq_len = max_seq_len
+        self.tokenizer = get_kobart_tokenizer()
+
+    def __len__(self):
+        return len(self.data)
+
+    def _encode(self, text):
+        tokens = [self.tokenizer.bos_token] + \
+            self.tokenizer.tokenize(text) + [self.tokenizer.eos_token]
+        encoder_input_id = self.tokenizer.convert_tokens_to_ids(tokens)
+        attention_mask = [1] * len(encoder_input_id)
+        if len(encoder_input_id) < self.max_seq_len:
+            while len(encoder_input_id) < self.max_seq_len:
+                encoder_input_id += [self.tokenizer.pad_token_id]
+                attention_mask += [0]
+        else:
+            encoder_input_id = encoder_input_id[:self.max_seq_len - 1] + [
+                self.tokenizer.eos_token_id]
+            attention_mask = attention_mask[:self.max_seq_len]
+        return np.array(encoder_input_id, dtype=np.int_), np.array(attention_mask, dtype=np.float32)
+
+    def __getitem__(self, index):
+        record = self.data.iloc[index]
+        st1, st2, label = str(record['sentence1']), str(record['sentence2']), float(record['label'])
+
+        s1_input_ids, s1_attention_mask = self._encode(st1)
+        s2_input_ids, s2_attention_mask = self._encode(st2)
+
+        return {'p_input_ids': s1_input_ids,
+                'p_attention_mask': s1_attention_mask,
+                'h_input_ids': s2_input_ids,
+                'h_attention_mask': s2_attention_mask,
+                'labels': np.array(label, dtype=np.float_)}
+
+
+class STSDataModule(pl.LightningDataModule):
+    def __init__(self, train_file,
+                 test_file,
+                 max_seq_len=128,
+                 batch_size=32):
+        super().__init__()
+        self.batch_size = batch_size
+        self.max_seq_len = max_seq_len
+        self.train_file_path = train_file
+        self.test_file_path = test_file
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        parser = argparse.ArgumentParser(
+            parents=[parent_parser], add_help=False)
+        return parser
+
+    # OPTIONAL, called for every GPU/machine (assigning state is OK)
+    def setup(self, stage):
+        # split dataset
+        self.sts_train = STSDataset(self.train_file_path,
+                                      self.max_seq_len)
+        self.sts_test = STSDataset(self.test_file_path,
+                                     self.max_seq_len)
+
+    # return the dataloader for each split
+    def train_dataloader(self):
+        sts_train = DataLoader(self.sts_train,
+                                batch_size=self.batch_size,
+                                num_workers=5, shuffle=True)
+        return sts_train
+
+    def val_dataloader(self):
+        sts_val = DataLoader(self.sts_test,
+                              batch_size=int(self.batch_size / 2),
+                              num_workers=5, shuffle=False)
+        return sts_val
+
+    def test_dataloader(self):
+        sts_test = DataLoader(self.sts_test,
+                               batch_size=int(self.batch_size / 2),
+                               num_workers=5, shuffle=False)
+        return sts_test
 
 class BaseModule(pl.LightningModule):
     def __init__(self, hparams, **kwargs) -> None:
@@ -357,30 +486,109 @@ class KoBARTClassification(BaseModule):
         self.log('val_acc', self.valid_acc, on_step=True, on_epoch=True, prog_bar=True)
 
 
+class KoBARTRegression(BaseModule):
+    def __init__(self, hparams, **kwargs):
+        super(KoBARTRegression, self).__init__(hparams, **kwargs)
+        self.model = BartModel.from_pretrained(get_pytorch_kobart_model())
+        self.pooling = PoolingHead(input_dim=self.model.config.d_model,
+            inner_dim=self.model.config.d_model,
+            pooler_dropout=0.1)
+        self.classification = nn.Linear(self.model.config.d_model * 3, 1)
+        self.valid_pearson = PearsonCorrcoef()
+        self.valid_spearman = SpearmanCorrcoef()
+
+    def forward(self, input_ids, attention_mask):
+        return self.model(input_ids=input_ids, attention_mask=attention_mask, return_dict=True)
+
+    def _get_encoding(self, input_ids, attention_mask, typ='norm_avg'):
+        if typ == 'norm_avg':
+            outs = self(input_ids, attention_mask)
+            lengths = attention_mask.sum(dim=1)
+            mask_3d = attention_mask.unsqueeze(dim=-1).repeat_interleave(repeats=self.model.config.d_model, dim=2)
+
+            masked_encoder_out = (outs['last_hidden_state'] * mask_3d).sum(dim=1)
+            # to avoid 0 division 
+            norm_encoder_out = masked_encoder_out / (lengths + 1).unsqueeze(dim=1)
+            return norm_encoder_out
+        elif typ == 'avg':
+            last_hidden = self(input_ids, attention_mask)['last_hidden_state']
+            return torch.mean(last_hidden, dim=1)
+
+    def encoding(self, input_ids, attention_mask):
+        return self.pooling(self._get_encoding(input_ids, attention_mask, typ=self.hparams.avg_type))
+
+    def _step(self, batch):
+        p_input_ids= batch['p_input_ids']
+        p_attention_mask = batch['p_attention_mask']
+        h_input_ids= batch['h_input_ids']
+        h_attention_mask = batch['h_attention_mask']
+        # encode of premise [batch, 768]
+        p_encoding = self._get_encoding(p_input_ids, p_attention_mask, typ=self.hparams.avg_type)
+        h_encoding = self._get_encoding(h_input_ids, h_attention_mask, typ=self.hparams.avg_type)
+        u = self.pooling(p_encoding)
+        v = self.pooling(h_encoding)
+        return torch.cosine_similarity(u, v)
+
+    def training_step(self, batch, batch_idx):
+        labels = batch['labels']
+        logits = self._step(batch)
+        loss = torch.nn.functional.mse_loss(logits.squeeze(), labels.float() / 5.0)
+        self.log('train_loss', loss, prog_bar=True)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        labels = batch['labels']
+        logits = self._step(batch)
+        self.valid_pearson(logits.squeeze(), labels.float() / 5.0)
+        self.valid_spearman(logits.squeeze(), labels.float() / 5.0)
+        self.log('val_pearson', self.valid_pearson, on_step=True, on_epoch=True, prog_bar=True)
+        self.log('val_spearman', self.valid_spearman, on_step=True, on_epoch=True, prog_bar=True)
+
+
+
 if __name__ == '__main__':
     parser = BaseModule.add_model_specific_args(parser)
     parser = ArgsBase.add_model_specific_args(parser)
     parser = NLIDataModule.add_model_specific_args(parser)
+    parser = STSDataModule.add_model_specific_args(parser)
     parser = pl.Trainer.add_argparse_args(parser)
     args = parser.parse_args()
     logging.info(args)
 
-    if args.checkpoint_path:
-        model = KoBARTClassification.load_from_checkpoint(checkpoint_path=args.checkpoint_path)
-        logging.info('model loaded from checkpoints')
-        sys.exit()
-    else:
-        # init model
-        model = KoBARTClassification(args)
 
     if args.subtask == 'NLI':
         # init data
+        if args.checkpoint_path:
+            model = KoBARTClassification.load_from_checkpoint(checkpoint_path=args.checkpoint_path)
+            logging.info('model loaded from checkpoints')
+            sys.exit()
+        else:
+            # init model
+            model = KoBARTClassification(args)
         dm = NLIDataModule(args.train_file,
                            args.test_file,
                            batch_size=args.batch_size, max_seq_len=args.max_seq_len)
         checkpoint_callback = pl.callbacks.ModelCheckpoint(monitor='val_acc',
                                                            dirpath=args.default_root_dir,
                                                            filename='model_chp/{epoch:02d}-{val_acc:.3f}',
+                                                           verbose=True,
+                                                           save_last=True,
+                                                           mode='max',
+                                                           save_top_k=-1)
+    elif args.subtask == 'STS':
+        if args.checkpoint_path:
+            model = KoBARTRegression.load_from_checkpoint(checkpoint_path=args.checkpoint_path)
+            logging.info('model loaded from checkpoints')
+            sys.exit()
+        else:
+            # init model
+            model = KoBARTRegression(args)
+        dm = STSDataModule(args.train_file,
+                           args.test_file,
+                           batch_size=args.batch_size, max_seq_len=args.max_seq_len)
+        checkpoint_callback = pl.callbacks.ModelCheckpoint(monitor='val_pearson',
+                                                           dirpath=args.default_root_dir,
+                                                           filename='model_chp/{epoch:02d}-{val_pearson:.3f}',
                                                            verbose=True,
                                                            save_last=True,
                                                            mode='max',
