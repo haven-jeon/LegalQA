@@ -26,27 +26,22 @@ import logging
 import os
 import sys
 import time
-
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 import numpy as np
-
-from jina.executors.decorators import batching, as_ndarray
-from jina.executors.encoders import BaseEncoder
-from jina.executors.encoders.frameworks import BaseTorchEncoder
 import pandas as pd
-import numpy as np
-import torch
-from torch.nn import CrossEntropyLoss
-from torch import nn
-from torch.utils.data import DataLoader, Dataset
 import pytorch_lightning as pl
-from torchmetrics import Accuracy, PearsonCorrcoef, SpearmanCorrcoef
-from pytorch_lightning import loggers as pl_loggers
-from transformers.optimization import AdamW, get_cosine_schedule_with_warmup
-from transformers import BartModel
-
+import torch
+from jina.executors.decorators import as_ndarray, batching
+from jina.executors.encoders.frameworks import BaseTorchEncoder
 from kobart import get_kobart_tokenizer, get_pytorch_kobart_model
+from pytorch_lightning import loggers as pl_loggers
+from torch import nn
+from torch.nn import CrossEntropyLoss
+from torch.utils.data import DataLoader, Dataset
+from torchmetrics import Accuracy, PearsonCorrcoef, SpearmanCorrcoef
+from transformers import BartModel
+from transformers.optimization import AdamW, get_cosine_schedule_with_warmup
 
 parser = argparse.ArgumentParser(description='subtask for KoBART')
 
