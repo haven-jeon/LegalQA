@@ -10,8 +10,12 @@ SentenceKoBART 모델을 기반으로 하는 법률 QA 시스템 구현
 ## Setup
 
 ```bash
+# git lfs 설치, https://github.com/git-lfs/git-lfs/wiki/Installation 참고
+curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
+sudo apt install git-lfs
 git clone https://github.com/haven-jeon/LegalQA.git
 cd LegalQA
+git lfs pull
 pip install -r requirements.txt
 ```
 
