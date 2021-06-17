@@ -12,7 +12,6 @@ SentenceKoBART 모델을 기반으로 하는 법률 QA 시스템 구현
 ```bash
 git clone https://github.com/haven-jeon/LegalQA.git
 cd LegalQA
-sh get_model.sh
 pip install -r requirements.txt
 ```
 
