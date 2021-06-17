@@ -1,6 +1,6 @@
 # LegalQA using SentenceKoBART
 
-SentenceKoBART 모델을 기반으로 하는 법률 QA 시스템 구현
+Sentence[KoBART](https://github.com/SKT-AI/KoBART) 모델을 기반으로 하는 법률 QA 시스템 구현
 
 - [How to train SentenceKoBART](pods/README.md)
 - Neural Search Engine [Jina](https://github.com/jina-ai/jina) 활용
