@@ -1,5 +1,7 @@
 # SentenceKoBART
 
+- Fine tuning is essential for good search performance.
+
 ![](../data/sbart.png)
 
 - The idea came from [Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks](https://arxiv.org/abs/1908.10084), and the encoder performance of BART was utilized.
