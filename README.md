@@ -1,16 +1,16 @@
 # LegalQA using SentenceKoBART
 
-Sentence[KoBART](https://github.com/SKT-AI/KoBART) 모델을 기반으로 하는 법률 QA 시스템 구현
+Implementation of legal QA system based on Sentence[KoBART](https://github.com/SKT-AI/KoBART)
 
 - [How to train SentenceKoBART](pods/README.md)
-- Neural Search Engine [Jina](https://github.com/jina-ai/jina) 활용
-- 법률 QA 데이터 수집(1,830 pairs)
+- Based on Neural Search Engine [Jina](https://github.com/jina-ai/jina) 
+- Provide Korean legal QA data(1,830 pairs)
 
 
 ## Setup
 
 ```bash
-# git lfs 설치, https://github.com/git-lfs/git-lfs/wiki/Installation 참고
+# install git lfs , https://github.com/git-lfs/git-lfs/wiki/Installation
 curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
 sudo apt install git-lfs
 git clone https://github.com/haven-jeon/LegalQA.git
@@ -28,7 +28,9 @@ python app.py -t index
 
 ![](data/index.svg)
 
-`pods/encoder.yml` - `on_gpu: true` 옵션으로 GPU 기반 인덱싱 가능 
+GPU-based indexing available as an option
+
+- `pods/encoder.yml` - `on_gpu: true`
 
 ## Search
 
@@ -80,5 +82,5 @@ howpublished = {\url{https://github.com/haven-jeon/LegalQA}}
 
 ## License
 
-- QA 데이터인 `data/legalqa.jsonlines`는 [www.freelawfirm.co.kr](http://www.freelawfirm.co.kr/lawqnainfo)에서 `robots.txt`에 준거하여 크롤링한 데이터이며 학술적인 용도 이외에 상업적인 이용은 할 수 없습니다.(`CC BY-NC-SA 4.0`)
-- 이곳에서 제공하는 리소스를 활용해 법률적 판단을 하는것에 대해서 어떠한 책임도 지지 않습니다.
+- QA data `data/legalqa.jsonlines` is crawled in [www.freelawfirm.co.kr](http://www.freelawfirm.co.kr/lawqnainfo) based on `robots.txt`. Commercial use other than academic use is prohibited.
+- We are not responsible for any legal decisions we make based on the resources provided here.
