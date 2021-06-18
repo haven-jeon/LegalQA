@@ -4,7 +4,7 @@ Implementation of legal QA system based on Sentence[KoBART](https://github.com/S
 
 - [How to train SentenceKoBART](pods/README.md)
 - Based on Neural Search Engine [Jina](https://github.com/jina-ai/jina) 
-- Provide Korean legal QA data(1,830 pairs)
+- [Provide Korean legal QA data](data/legalqa.jsonlines)(1,830 pairs)
 
 
 ## Setup
