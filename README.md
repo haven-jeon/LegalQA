@@ -16,6 +16,9 @@ sudo apt install git-lfs
 git clone https://github.com/haven-jeon/LegalQA.git
 cd LegalQA
 git lfs pull
+# If the lfs quota is exceeded, please download it with the command below.
+# wget http://gogamza.ipdisk.co.kr:80/gogamzapubs/VOL1/URLs/models/SentenceKoBART.bin
+# mv SentenceKoBART.bin model/
 pip install -r requirements.txt
 ```
 
