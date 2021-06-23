@@ -17,7 +17,7 @@ git clone https://github.com/haven-jeon/LegalQA.git
 cd LegalQA
 git lfs pull
 # If the lfs quota is exceeded, please download it with the command below.
-# wget https://komodels.s3.ap-northeast-2.amazonaws.com/models/SentenceKoBART.bin
+# wget http://gogamza.ipdisk.co.kr:80/gogamzapubs/VOL1/URLs/models/SentenceKoBART.bin
 # mv SentenceKoBART.bin model/
 pip install -r requirements.txt
 ```
@@ -68,6 +68,19 @@ python app.py -t query
 | ![](data/demo.gif)|
 | ------ |
 
+
+## FAQ
+
+### Why this dataset?
+
+Legal data is composed of technical terms, so it is difficult to search if you are not familiar with these terms. Because of these characteristics, I thought it was a good example to show the effectiveness of neural IR.
+
+### LFS quota is exceeded
+
+You can download `SentenceKoBART.bin` from one of the two links below.
+
+- http://gogamza.ipdisk.co.kr:80/gogamzapubs/VOL1/URLs/models/SentenceKoBART.bin
+- https://komodels.s3.ap-northeast-2.amazonaws.com/models/SentenceKoBART.bin
 
 ## Citation
 
