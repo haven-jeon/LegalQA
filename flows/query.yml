@@ -4,11 +4,12 @@ with:
   title: LegalQA
   description: Korean LegalQA System
 executors:
-  - name: segmenter
+  - name: SentenceSplitter
     uses: pods/segment.yml
-  - name: encode
+  - name: SentenceKoBART
     uses: pods/encode.yml
-  - name: docvec
+  - name: DocVecIndexer
     uses: pods/vector_indexer.yml
-  - name: keyval
+  - name: KeyValIndexer
     uses: pods/keyval_indexer.yml
+
