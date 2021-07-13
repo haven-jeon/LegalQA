@@ -1,4 +1,3 @@
-from inspect import Parameter
 import os
 import re
 import json
@@ -222,15 +221,20 @@ class DocVectorIndexer(Executor):
         if docs is None:
             return
         a = np.stack(docs.get_attributes('embedding'))
-        b = np.stack(self._docs.get_attributes('embedding'))
         q_emb = _ext_A(_norm(a))
-        d_emb = _ext_B(_norm(b))
-        dists = _cosine(q_emb, d_emb)
+        # get chunk embeddings and 'min' aggr
+        aggr_chunk_dist = []
+        for d in self._docs:
+            b = np.stack(d.chunks.get_attributes('embedding'))
+            d_emb = _ext_B(_norm(b))
+            dists = _cosine(q_emb, d_emb) # cosine distance
+            aggr_chunk_dist.append(dists[:, np.argmin(dists)])
+        dists = np.stack(aggr_chunk_dist, axis=1)
         idx, dist = self._get_sorted_top_k(dists, int(parameters['top_k']))
         for _q, _ids, _dists in zip(docs, idx, dist):
             for _id, _dist in zip(_ids, _dists):
                 d = Document(self._docs[int(_id)], copy=True)
-                d.scores['cosine'] = 1 - _dist
+                d.scores['cosine'] = 1 - _dist # cosine sim.
                 _q.matches.append(d)
 
     @staticmethod
@@ -264,7 +268,6 @@ class KeyValueIndexer(Executor):
             for match in doc.matches:
                 extracted_doc = self._docs[match.parent_id]
                 match.update(extracted_doc)
-
 
 
 class WeightedRanker(Executor):
@@ -342,47 +345,47 @@ def _cosine(A_norm_ext, B_norm_ext):
     return A_norm_ext.dot(B_norm_ext).clip(min=0) / 2
 
 
-def _pre_processing(texts):
-    print('start of pre-processing')
-    results = []
-    for i in texts:
-        d = json.loads(i)
-        d['text'] = d['title'].strip() + '. ' + d['question']
-        results.append(Document(json.dumps(d, ensure_ascii=False)))
-    return results
+# def _pre_processing(texts):
+#     print('start of pre-processing')
+#     results = []
+#     for i in texts:
+#         d = json.loads(i)
+#         d['text'] = d['title'].strip() + '. ' + d['question']
+#         results.append(Document(json.dumps(d, ensure_ascii=False)))
+#     return results
 
 
 
-def print_topk(resp, sentence):
-    for doc in resp.data.docs:
-        print(f"\n\n\nTa-Dah🔮, here's what we found for: {sentence}")
-        for idx, match in enumerate(doc.matches):
-            score = match.scores['cosine'].value
-            if score < 0.0:
-                continue
-            print(f'> {idx:>2d}({score:.2f}). {match.text}')
-        print('\n\n\n')
+# def print_topk(resp, sentence):
+#     for doc in resp.data.docs:
+#         print(f"\n\n\nTa-Dah🔮, here's what we found for: {sentence}")
+#         for idx, match in enumerate(doc.matches):
+#             score = match.scores['cosine'].value
+#             if score < 0.0:
+#                 continue
+#             print(f'> {idx:>2d}({score:.2f}). {match.text}')
+#         print('\n\n\n')
 
-if __name__ == '__main__':
-    f = Flow().add(name='segment', uses={'jtype': 'Segmenter', 'with': {'punct_chars': '!?.'}}).add(uses={'jtype': 'KoSentenceBART', 'with': {'default_traversal_paths': ['r', 'c']}}).add(name='docvec', uses={'jtype': 'DocVectorIndexer', 'with': {'index_file_name': 'test.idx'}}, workspace='spaces').add(name='keyval',uses={'jtype': 'KeyValueIndexer'}, needs='segment', workspace='spaces').needs(['docvec', 'keyval'], name='joinAll')
-    data_path = os.path.join(os.path.dirname(__file__),
-                             os.environ.get('JINA_DATA_FILE', None))
-    # with f:
-    #     a = f.post('/index',
-    #                _pre_processing(open(data_path, 'rt').readlines()),
-    #                request_size=10,
-    #                show_progress=True,
-    #                return_results=True)
+# if __name__ == '__main__':
+#     f = Flow().add(uses='pods/segmemt.yml').add(uses={'jtype': 'KoSentenceBART', 'with': {'default_traversal_paths': ['r', 'c']}}).add(name='docvec', uses={'jtype': 'DocVectorIndexer', 'with': {'index_file_name': 'test.idx'}}, workspace='spaces').add(name='keyval',uses={'jtype': 'KeyValueIndexer'}, needs='segment', workspace='spaces').needs(['docvec', 'keyval'], name='joinAll')
+#     data_path = os.path.join(os.path.dirname(__file__),
+#                              os.environ.get('JINA_DATA_FILE', None))
+#     with f:
+#         a = f.post('/index',
+#                    _pre_processing(open(data_path, 'rt').readlines()),
+#                    request_size=10,
+#                    show_progress=True,
+#                    return_results=True)
 
-    # f = Flow().add(name='segment', uses={'jtype': 'Segmenter', 'with': {'punct_chars': '!?.'}}).add(uses={'jtype': 'KoSentenceBART', 'with': {'default_traversal_paths': ['c']}}).add(name='docvec', uses={'jtype': 'DocVectorIndexer', 'with': {'index_file_name': 'test.idx'}}, workspace='spaces').add(name='keyval',uses={'jtype': 'KeyValueIndexer'}, needs='docvec', workspace='spaces')
-    with f:
-        while True:
-            text = input("Please type a sentence: ")
-            if not text:
-                break
+#     # f = Flow().add(name='segment', uses={'jtype': 'Segmenter', 'with': {'punct_chars': '!?.'}}).add(uses={'jtype': 'KoSentenceBART', 'with': {'default_traversal_paths': ['r', 'c']}}).add(name='docvec', uses={'jtype': 'DocVectorIndexer', 'with': {'index_file_name': 'test.idx'}}, workspace='spaces').add(name='keyval',uses={'jtype': 'KeyValueIndexer'}, needs='docvec', workspace='spaces')
+#     with f:
+#         while True:
+#             text = input("Please type a sentence: ")
+#             if not text:
+#                 break
 
-            def ppr(x):
-                print_topk(x, text)
+#             def ppr(x):
+#                 print_topk(x, text)
 
-            f.search(Document(text=text), parameters={'top_k': 5}, on_done=ppr)
+#             f.search(Document(text=text), parameters={'top_k': 30}, on_done=ppr)
             

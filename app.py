@@ -4,7 +4,7 @@ import os
 import json
 
 import click
-from jina.flow import Flow
+from jina import Flow, Document
 
 
 MAX_DOCS = int(os.environ.get("JINA_MAX_DOCS", 2000))
@@ -20,15 +20,15 @@ def config():
 
 
 def print_topk(resp, sentence):
-    for d in resp.search.docs:
-        print(f"Ta-Dah🔮, here are what we found for: {sentence}")
-        for idx, match in enumerate(d.matches):
-
-            score = match.score.value
+    for doc in resp.data.docs:
+        print(f"\n\n\nTa-Dah🔮, here's what we found for: {sentence}")
+        for idx, match in enumerate(doc.matches):
+            score = match.scores['cosine'].value
             if score < 0.0:
                 continue
-            answer = match.tags['answer']
-            print(f'> Rank : {idx:>2d}({score:.2f})\nTitle: {match.text}\nAnswer: {answer}\n')
+            print(f'> {idx:>2d}({score:.2f}). {match.text}')
+        print('\n\n\n')
+
 
 def _pre_processing(texts):
     print('start of pre-processing')
@@ -36,15 +36,18 @@ def _pre_processing(texts):
     for i in texts:
         d = json.loads(i)
         d['text'] = d['title'].strip() + '. ' + d['question']
-        results.append(json.dumps(d, ensure_ascii=False))
+        results.append(Document(json.dumps(d, ensure_ascii=False)))
     return results
+
 
 def index(num_docs):
     f = Flow().load_config("flows/index.yml").plot(output='index.svg')
 
     with f:
         data_path = os.path.join(os.path.dirname(__file__), os.environ.get('JINA_DATA_FILE', None))
-        f.index_lines(lines=_pre_processing(open(data_path, 'rt').readlines()), line_format='json', field_resolver={'id': 'id', 'text': 'text'})
+        f.post('/index',
+                _pre_processing(open(data_path, 'rt').readlines()),
+                how_progress=True)
 
 
 def query(top_k):
@@ -58,7 +61,7 @@ def query(top_k):
             def ppr(x):
                 print_topk(x, text)
 
-            f.search_lines(lines=[text, ], line_format='text', on_done=ppr, top_k=top_k)
+            f.search(Document(text=text), parameters={'top_k': top_k}, on_done=ppr)
 
 
 def query_restful():

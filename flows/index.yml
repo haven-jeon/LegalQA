@@ -1,20 +1,15 @@
-!Flow
-version: '1'
-pods:
+jtype: Flow
+with:
+  workspace: $JINA_WORKSPACE
+executors:
   - name: segmenter
-    show_exc_info: true
     uses: pods/segment.yml
-    read_only: true
-  - name: encoder
+  - name: encode
     uses: pods/encode.yml
-    timeout_ready: 1200000
-    read_only: true
-  - name: chunk_indexer
-    uses: pods/index.yml
-  - name: doc_indexer
-    uses: pods/doc.yml
-    needs: gateway
-  - name: join_all
-    uses: _pass
-    needs: [doc_indexer, chunk_indexer]
-
+  - name: docvec
+    uses: pods/vector_indexer.yml
+  - name: keyval
+    uses: pods/keyval_indexer.yml
+    needs: segmenter
+  - name: joiner
+    needs: [docvec, keyval]

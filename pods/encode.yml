@@ -1,12 +1,9 @@
-!KoBARTRegEncoder
+jtype: KoSentenceBART
+with:
+  device: cpu
+  pretrained_model_path: model/SentenceKoBART.bin
+  default_traversal_paths: ['c', 'r']
 metas:
-  # batch_size: 32
-  on_gpu: false
-  py_modules: sentencekobart.py
-requests:
-  on:
-    [SearchRequest, IndexRequest]:
-      with:
-        traversal_paths: ['c']
-      drivers:
-        - jtype: EncodeDriver {}
+  name: encoder
+  description: KoSentenceBART Encoder for IR
+  py_modules: my_executors.py

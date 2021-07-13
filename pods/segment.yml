@@ -1,11 +1,7 @@
-!Sentencizer
+jtype: Segmenter
 with:
-  min_sent_len: 2
-  max_sent_len: 128
-  uniform_weight: true
-  punct_chars: "?!."
-requests:
-  use_default: true
-  on:
-    [SearchRequest, IndexRequest]:
-      - jtype: SegmentDriver {}
+  punct_chars: '!?.'
+metas:
+  name: segment
+  description: segment document using punctuation 
+  py_modules: my_executors.py
