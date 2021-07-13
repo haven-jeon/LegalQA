@@ -61,9 +61,16 @@ Or use [Jinabox](https://jina.ai/jinabox.js/) with endpoint `http://127.0.0.1:12
 python app.py -t query
 ```
 
+## Presentation
+
+- [Neural IR 101](http://tiny.one/neuralIR101)
+
+| ![](data/present.png)|
+| ------ |
+
 ## Demo 
 
-- http://ec2-3-36-123-253.ap-northeast-2.compute.amazonaws.com:7874/
+- [To Demo](http://ec2-3-36-123-253.ap-northeast-2.compute.amazonaws.com:7874/)
 
 | ![](data/demo.gif)|
 | ------ |
