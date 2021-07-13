@@ -12,6 +12,3 @@ executors:
     uses: pods/vector_indexer.yml
   - name: keyval
     uses: pods/keyval_indexer.yml
-    needs: segmenter
-  - name: joiner
-    needs: [docvec, keyval]

@@ -262,12 +262,12 @@ class KeyValueIndexer(Executor):
     def index(self, docs: DocumentArray, **kwargs):
         self._docs.extend(docs)
 
-    @requests(on='/search')
-    def query(self, docs: DocumentArray, **kwargs):
-        for doc in docs:
-            for match in doc.matches:
-                extracted_doc = self._docs[match.parent_id]
-                match.update(extracted_doc)
+    # @requests(on='/search')
+    # def query(self, docs: DocumentArray, **kwargs):
+    #     for doc in docs:
+    #         for match in doc.matches:
+    #             extracted_doc = self._docs[match.parent_id]
+    #             match.update(extracted_doc)
 
 
 class WeightedRanker(Executor):
