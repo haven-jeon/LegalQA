@@ -10,7 +10,7 @@ headers = {
 }
 
 # Set default endpoint. Usually this would be passed to a function via a parameter
-DEFAULT_ENDPOINT = "http://0.0.0.0:45678/api/search"
+DEFAULT_ENDPOINT = "http://0.0.0.0:45678/search"
 
 
 class text:
@@ -27,15 +27,20 @@ class text:
             """
             Process Jina's JSON output and parse results
             """
-            data = {"top_k": top_k, "mode": "search", "data": [query]}
+            data = {
+                        "parameters": {
+                            "top_k": top_k,
+                        },
+                        "data": [query]
+                    }
             response = requests.post(endpoint, headers=headers, json=data)
 
-            content = response.json()["search"]["docs"]
+            content = response.json()["data"]["docs"]
             results = []
             for doc in content:
                 matches = doc["matches"]  # list
                 for match in matches:
-                    score = match["score"]["value"]
+                    score = match['scores']['cosine']['value']
                     title = match["text"]
                     body = match["tags"]["answer"]
                     results.append(OrderedDict({'score': score, 'title': title, 'body': body}))
@@ -113,7 +118,6 @@ class jina:
             if button:
                 matches = text.process.json(query, top_k, endpoint)
                 st.write(matches)
-                print(matches)
                 print()
 
         return container
@@ -146,7 +150,7 @@ class jina:
 
 st.set_page_config(page_title="Jina Text Search",)
 
-endpoint = "http://0.0.0.0:1234/api/search"
+endpoint = "http://0.0.0.0:1234/search"
 
 st.title("LegalQA with SentenceKoBART")
 st.markdown("")

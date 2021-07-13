@@ -1,20 +1,17 @@
-!Flow
-version: '1'
-pods:
-  - name: segmenter
-    show_exc_info: true
+jtype: Flow
+with:
+  workspace: $JINA_WORKSPACE
+  title: LegalQA
+  description: Korean LegalQA System
+executors:
+  - name: SentenceSplitter
     uses: pods/segment.yml
-    read_only: true
-  - name: encoder
+  - name: SentenceKoBART
     uses: pods/encode.yml
-    timeout_ready: 1200000
-    read_only: true
-  - name: chunk_indexer
-    uses: pods/index.yml
-  - name: doc_indexer
-    uses: pods/doc.yml
-    needs: gateway
-  - name: join_all
-    uses: _pass
-    needs: [doc_indexer, chunk_indexer]
-
+  - name: DocVecIndexer
+    uses: pods/vector_indexer.yml
+  - name: KeyValIndexer
+    uses: pods/keyval_indexer.yml
+    needs: SentenceSplitter
+  - name: joiner
+    needs: [DocVecIndexer, KeyValIndexer]
