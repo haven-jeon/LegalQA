@@ -5,5 +5,5 @@ pytorch-lightning == 1.3.5
 torchmetrics
 git+https://github.com/SKT-AI/KoBART@no_version_deps#egg=kobart
 torch==1.9.0
-jina[standard]==2.0.5
+jina[standard]==2.0.7
 streamlit
