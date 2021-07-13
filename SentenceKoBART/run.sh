@@ -1,0 +1,1 @@
+python train.py --gpus 1 --max_epochs 30 --default_root_dir training_log --gradient_clip_val 1.0  --train_file data/train.tsv --test_file data/test.tsv --batch_size 64

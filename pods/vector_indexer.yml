@@ -1,0 +1,7 @@
+jtype: DocVectorIndexer
+with:
+  index_file_name: 'docvec.idx'
+metas:
+  name: docvec
+  description: vector indexer for embedding
+  py_modules: my_executors.py

@@ -1,6 +1,8 @@
 jtype: Flow
 with:
   workspace: $JINA_WORKSPACE
+  title: LegalQA
+  description: Korean LegalQA System
 executors:
   - name: segmenter
     uses: pods/segment.yml

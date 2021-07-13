@@ -3,7 +3,7 @@
 Implementation of legal QA system based on Sentence[KoBART](https://github.com/SKT-AI/KoBART)
 
 - [How to train SentenceKoBART](pods/README.md)
-- Based on Neural Search Engine [Jina](https://github.com/jina-ai/jina) 
+- Based on Neural Search Engine [Jina](https://github.com/jina-ai/jina) v2.0
 - [Provide Korean legal QA data](data/legalqa.jsonlines)(1,830 pairs)
 
 
@@ -33,7 +33,7 @@ python app.py -t index
 
 GPU-based indexing available as an option
 
-- `pods/encoder.yml` - `on_gpu: true`
+- `pods/encode.yml` - `device: cuda`
 
 ## Search
 
@@ -50,10 +50,10 @@ python app.py -t query_restful
 Then use a client to query:
 
 ```sh
-curl --request POST -d '{"top_k": 1, "mode": "search",  "data": ["상속 관련 문의"]}' -H 'Content-Type: application/json' 'http://0.0.0.0:1234/api/search'
+curl --request POST -d '{"parameters": {"top_k": 1},  "data": ["상속 관련 문의"]}' -H 'Content-Type: application/json' 'http://0.0.0.0:1234/search'
 ````
 
-Or use [Jinabox](https://jina.ai/jinabox.js/) with endpoint `http://127.0.0.1:1234/api/search`
+Or use [Jinabox](https://jina.ai/jinabox.js/) with endpoint `http://127.0.0.1:1234/search`
 
 ### From the terminal
 

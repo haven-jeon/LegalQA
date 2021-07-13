@@ -65,8 +65,7 @@ def query(top_k):
 
 
 def query_restful():
-    f = Flow().load_config("flows/query.yml")
-    f.use_rest_gateway()
+    f = Flow().load_config("flows/query.yml", override_with={'protocol': 'http', 'port_expose': int(os.environ["JINA_PORT"])})
     with f:
         f.block()
 
