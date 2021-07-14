@@ -173,14 +173,13 @@ class KoSentenceBART(Executor):
 
 
 class Segmenter(Executor):
-    def __init__(
-            self,
-            min_sent_len: int = 1,
-            max_sent_len: int = 512,
-            punct_chars: Optional[List[str]] = None,
-            uniform_weight: bool = True,
-            *args,
-            **kwargs):
+    def __init__(self,
+                 min_sent_len: int = 1,
+                 max_sent_len: int = 512,
+                 punct_chars: Optional[List[str]] = None,
+                 uniform_weight: bool = True,
+                 *args,
+                 **kwargs):
         super().__init__(*args, **kwargs)
         self.min_sent_len = min_sent_len
         self.max_sent_len = max_sent_len
@@ -222,12 +221,15 @@ class Segmenter(Executor):
             text = doc.text
             chunks = self._split(text)
             for c in chunks:
-                doc.chunks += [(Document(**c, mime_type='text/plain', tags={'root_doc_id': doc.id}))]
+                doc.chunks += [(Document(**c,
+                                         mime_type='text/plain',
+                                         tags={'root_doc_id': doc.id}))]
 
 
 class DocVectorIndexer(Executor):
-    def __init__(self, index_file_name: str, **kwargs):
+    def __init__(self, index_file_name: str, aggr_chunks: str, **kwargs):
         super().__init__(**kwargs)
+        self.aggr_chunks = aggr_chunks.lower()
         self._docs = DocumentArrayMemmap(self.workspace +
                                          f'/{index_file_name}')
 
@@ -242,18 +244,28 @@ class DocVectorIndexer(Executor):
         a = np.stack(docs.get_attributes('embedding'))
         q_emb = _ext_A(_norm(a))
         # get chunk embeddings and 'min' aggr
-        aggr_chunk_dist = []
-        for d in self._docs:
-            b = np.stack(d.chunks.get_attributes('embedding'))
-            d_emb = _ext_B(_norm(b))
-            dists = _cosine(q_emb, d_emb) # cosine distance
-            aggr_chunk_dist.append(dists[:, np.argmin(dists)])
-        dists = np.stack(aggr_chunk_dist, axis=1)
+        if self.aggr_chunks == 'none':
+            embedding_matrix = _ext_B(
+                _norm(np.stack(self._docs.get_attributes('embedding'))))
+            dists = _cosine(q_emb, embedding_matrix)
+        else:
+            aggr_chunk_dist = []
+            for d in self._docs:
+                b = np.stack(d.chunks.get_attributes('embedding'))
+                d_emb = _ext_B(_norm(b))
+                dists = _cosine(q_emb, d_emb)  # cosine distance
+                if self.aggr_chunks == 'min':
+                    aggr_chunk_dist.append(dists[:, np.argmin(dists)])
+                elif self.aggr_chunks == 'avg':
+                    aggr_chunk_dist.append(np.average(dists, axis=1))
+                else:
+                    assert False
+            dists = np.stack(aggr_chunk_dist, axis=1)
         idx, dist = self._get_sorted_top_k(dists, int(parameters['top_k']))
         for _q, _ids, _dists in zip(docs, idx, dist):
             for _id, _dist in zip(_ids, _dists):
                 d = Document(self._docs[int(_id)], copy=True)
-                d.scores['cosine'] = 1 - _dist # cosine sim.
+                d.scores['cosine'] = 1 - _dist  # cosine sim.
                 _q.matches.append(d)
 
     @staticmethod
@@ -273,27 +285,43 @@ class DocVectorIndexer(Executor):
 
 
 class KeyValueIndexer(Executor):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, aggr_chunks: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.aggr_chunks = aggr_chunks.lower()
         self._docs = DocumentArrayMemmap(self.workspace + '/kv-idx')
 
     @requests(on='/index')
     def index(self, docs: DocumentArray, **kwargs):
         self._docs.extend(docs)
 
-    # @requests(on='/search')
-    # def query(self, docs: DocumentArray, **kwargs):
-    #     for doc in docs:
-    #         for match in doc.matches:
-    #             extracted_doc = self._docs[match.parent_id]
-    #             match.update(extracted_doc)
+    @requests(on='/search')
+    def query(self, docs: DocumentArray, **kwargs):
+        if self.aggr_chunks == 'none':
+            for doc in docs:
+                for match in doc.matches:
+                    extracted_doc = self._docs[match.parent_id]
+                    match.update(extracted_doc)
+
+
+class FilterBy(Executor):
+    def __init__(self, cutoff: float = -1.0, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cutoff = cutoff
+
+    @requests
+    def query(self, docs: DocumentArray, **kwargs):
+        for doc in docs:
+            filtered_matches = DocumentArray()
+            for match in doc.matches:
+                if match.scores__cosine__value >= self.cutoff:
+                    filtered_matches.append(match)
+            doc.matches = filtered_matches
 
 
 class WeightedRanker(Executor):
     @requests(on='/search')
-    def rank(
-        self, docs_matrix: List['DocumentArray'], parameters: Dict, **kwargs
-    ) -> 'DocumentArray':
+    def rank(self, docs_matrix: List['DocumentArray'], parameters: Dict,
+             **kwargs) -> 'DocumentArray':
         """
         :param docs_matrix: list of :class:`DocumentArray` on multiple requests to
           get bubbled up matches.
@@ -302,32 +330,33 @@ class WeightedRanker(Executor):
         :param kwargs: not used (kept to maintain interface)
         """
 
-        result_da = DocumentArray()  # length: 1 as every time there is only one query
+        result_da = DocumentArray(
+        )  # length: 1 as every time there is only one query
         for d_mod1, d_mod2 in zip(*docs_matrix):
 
             final_matches = {}  # type: Dict[str, Document]
 
             for m in d_mod1.matches:
-                m.scores['relevance'] = m.scores['cosine'].value * d_mod1.weight
+                m.scores[
+                    'relevance'] = m.scores['cosine'].value * d_mod1.weight
                 final_matches[m.parent_id] = Document(m, copy=True)
 
             for m in d_mod2.matches:
                 if m.parent_id in final_matches:
-                    final_matches[m.parent_id].scores['relevance'] = final_matches[
-                        m.parent_id
-                    ].scores['relevance'].value + (
-                        m.scores['cosine'].value * d_mod2.weight
-                    )
+                    final_matches[
+                        m.parent_id].scores['relevance'] = final_matches[
+                            m.parent_id].scores['relevance'].value + (
+                                m.scores['cosine'].value * d_mod2.weight)
                 else:
-                    m.scores['relevance'] = m.scores['cosine'].value * d_mod2.weight
+                    m.scores[
+                        'relevance'] = m.scores['cosine'].value * d_mod2.weight
                     final_matches[m.parent_id] = Document(m, copy=True)
 
             da = DocumentArray(list(final_matches.values()))
             da.sort(key=lambda ma: ma.scores['relevance'].value, reverse=True)
-            d = Document(matches=da[: int(parameters['top_k'])])
+            d = Document(matches=da[:int(parameters['top_k'])])
             result_da.append(d)
         return result_da
-
 
 
 def _get_ones(x, y):

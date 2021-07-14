@@ -1,0 +1,7 @@
+jtype: FilterBy
+with:
+  cutoff: 0.5
+metas:
+  name: filterby
+  description: filter by score, (cosine sim. based) 
+  py_modules: my_executors.py

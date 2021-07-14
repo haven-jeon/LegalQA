@@ -1,4 +1,6 @@
 jtype: KeyValueIndexer
+with:
+  aggr_chunks: avg
 metas:
   name: keyval
   description: key-value indexer for embedding
