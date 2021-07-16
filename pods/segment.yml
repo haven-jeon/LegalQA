@@ -1,6 +1,7 @@
 jtype: Segmenter
 with:
   punct_chars: '!?.'
+  default_traversal_path: ['r']
 metas:
   name: segment
   description: segment document using punctuation 

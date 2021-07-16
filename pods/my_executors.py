@@ -178,6 +178,7 @@ class Segmenter(Executor):
                  max_sent_len: int = 512,
                  punct_chars: Optional[List[str]] = None,
                  uniform_weight: bool = True,
+                 default_traversal_path: Optional[List[str]] = None,
                  *args,
                  **kwargs):
         super().__init__(*args, **kwargs)
@@ -185,6 +186,8 @@ class Segmenter(Executor):
         self.max_sent_len = max_sent_len
         self.punct_chars = punct_chars
         self.uniform_weight = uniform_weight
+        self.logger = JinaLogger(self.__class__.__name__)
+        self.default_traversal_path = default_traversal_path or ['r']
         if not punct_chars:
             self.punct_chars = [
                 '!', '.', '?', '։', '؟', '۔', '܀', '܁', '܂', '‼', '‽', '⁇',
@@ -216,14 +219,15 @@ class Segmenter(Executor):
         return results
 
     @requests
-    def segment(self, docs: DocumentArray, **kwargs):
-        for doc in docs:
+    def segment(self, docs: DocumentArray, parameters: Dict, **kwargs):
+        traversal_path = parameters.get('traversal_paths', self.default_traversal_path)
+        f_docs = docs.traverse_flat(traversal_path)
+        for doc in f_docs:
             text = doc.text
             chunks = self._split(text)
             for c in chunks:
                 doc.chunks += [(Document(**c,
-                                         mime_type='text/plain',
-                                         tags={'root_doc_id': doc.id}))]
+                                         mime_type='text/plain'))]
 
 
 class DocVectorIndexer(Executor):
