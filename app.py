@@ -45,7 +45,7 @@ def index():
                                  os.environ.get('JINA_DATA_FILE', None))
         f.post('/index',
                _pre_processing(open(data_path, 'rt').readlines()),
-               how_progress=True)
+               how_progress=True, parameters={'traversal_paths': ['r', 'c']})
 
 
 def query(top_k):

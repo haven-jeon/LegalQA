@@ -34,6 +34,7 @@ from jina_commons.batching import get_docs_batch_generator
 from kobart import get_kobart_tokenizer, get_pytorch_kobart_model
 from transformers import BartModel
 
+from jinahub.indexers.storage.LMDBStorage import LMDBStorage
 
 class PoolingHead(torch.nn.Module):
     def __init__(
