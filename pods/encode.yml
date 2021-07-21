@@ -6,4 +6,4 @@ with:
 metas:
   name: encoder
   description: KoSentenceBART Encoder for IR
-  py_modules: my_executors.py
+  py_modules: sentencekobart.py
