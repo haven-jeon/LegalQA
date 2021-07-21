@@ -41,9 +41,10 @@ class text:
                 matches = doc["matches"]  # list
                 for match in matches:
                     score = match['scores']['cosine']['value']
-                    title = match["text"]
-                    body = match["tags"]["answer"]
-                    results.append(OrderedDict({'score': score, 'title': title, 'body': body}))
+                    title = match["tags"]["title"]
+                    question = match["tags"]["question"]
+                    answer = match["tags"]["answer"]
+                    results.append(OrderedDict({'score': score, 'title': title, 'question': question, 'answer': answer}))
 
             return results
 
