@@ -25,14 +25,9 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-import pytorch_lightning as pl
-import torch
 from jina import Document, DocumentArray, Executor, requests
 from jina.logging.logger import JinaLogger
 from jina.types.arrays.memmap import DocumentArrayMemmap
-from jina_commons.batching import get_docs_batch_generator
-from kobart import get_kobart_tokenizer, get_pytorch_kobart_model
-from transformers import BartModel
 
 from jinahub.indexers.storage.LMDBStorage import LMDBStorage
 
@@ -122,7 +117,7 @@ class DocVectorIndexer(Executor):
             for d in self._docs:
                 b = np.stack(d.chunks.get_attributes('embedding'))
                 d_emb = _ext_B(_norm(b))
-                dists = _cosine(q_emb, d_emb)  # cosine distance
+                dists = _cosine(q_emb, d_emb) * d.chunks.get_attributes('weight')  # cosine distance
                 if self.aggr_chunks == 'min':
                     aggr_chunk_dist.append(dists[:, np.argmin(dists)])
                 elif self.aggr_chunks == 'avg':
