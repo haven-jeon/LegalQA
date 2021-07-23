@@ -42,7 +42,6 @@ from pytorch_lightning.trainer.supporters import CombinedLoader
 
 from kobart import get_kobart_tokenizer, get_pytorch_kobart_model
 
-sys.stdout = open('log_test.log', 'w')
 
 parser = argparse.ArgumentParser(description='subtask for KoBART')
 

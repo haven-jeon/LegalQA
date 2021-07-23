@@ -80,11 +80,21 @@ def dryrun():
         f.dry_run()
 
 
+def train():
+    f = Flow().load_config("flows/train.yml").plot(output='train.svg')
+    with f:
+        data_path = os.path.join(os.path.dirname(__file__),
+                                 os.environ.get('JINA_DATA_FILE', None))
+        f.post('/train',
+               _pre_processing(open(data_path, 'rt').readlines()),
+               show_progress=True, parameters={'traversal_paths': ['r', 'c']})    
+
+
 @click.command()
 @click.option(
     "--task",
     "-t",
-    type=click.Choice(["index", "query", "query_restful", "dryrun"],
+    type=click.Choice(["index", "query", "query_restful", "dryrun", "train"],
                       case_sensitive=False),
 )
 @click.option("--top_k", "-k", default=3)
@@ -115,6 +125,8 @@ def main(task, top_k):
         query_restful()
     if task == "dryrun":
         dryrun()
+    if task == 'train':
+        train()
 
 
 if __name__ == "__main__":

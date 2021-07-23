@@ -1,0 +1,12 @@
+jtype: BertReRanker
+with:
+  model_name: skt/kobert-base-v1
+  max_seq_len: 128
+  batch_size: 30
+  max_epochs: 1
+metas:
+  name: bert_ranker
+  description: BERT ranking on top-k
+  py_modules: bert_reranker.py
+requests:
+  /train: train
