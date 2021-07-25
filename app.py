@@ -51,6 +51,7 @@ def index():
 def query(top_k):
     f = Flow().load_config("flows/query.yml").plot(output='query.svg')
     with f:
+        #f.post('/load', parameters={'model_path': 'rerank_model'})
         while True:
             text = input("Please type a sentence: ")
             if not text:
@@ -60,7 +61,7 @@ def query(top_k):
                 print_topk(x, text)
 
             f.search(Document(text=text),
-                     parameters={'top_k': top_k},
+                     parameters={'top_k': top_k, 'model_path': 'rerank_model'},
                      on_done=ppr)
 
 
@@ -86,9 +87,12 @@ def train():
         data_path = os.path.join(os.path.dirname(__file__),
                                  os.environ.get('JINA_DATA_FILE', None))
         f.post('/train',
-               _pre_processing(open(data_path, 'rt').readlines()),
-               show_progress=True, parameters={'traversal_paths': ['r', 'c']})    
-
+              _pre_processing(open(data_path, 'rt').readlines()),
+              show_progress=True, parameters={'traversal_paths': ['r', 'c']},
+              request_size=0)
+        #f.post('/load',
+        #      parameters={'model_path': 'kobert_model'})    
+        f.post(on='/dump', parameters={'model_path': 'rerank_model'})
 
 @click.command()
 @click.option(

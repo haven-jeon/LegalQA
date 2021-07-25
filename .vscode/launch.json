@@ -11,7 +11,7 @@
             "program": "app.py",
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env",
-            "args": ["-t", "train"]
+            "args": ["-t", "query"]
         }
     ]
 }
