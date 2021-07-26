@@ -64,6 +64,10 @@ GPU-based indexing available as an option
 The SentenceKoBART is not a model tuned based on the legal task, so it guarantees good recall, but requires adjustment in terms of precision. By re-ranking the results of top-k using a cross-encoder, we can supplement in terms of precision.
 
 ![](data/learntorank.jpg)
+
+- Model : Ranking for general purpose
+- Learn to Rank : Ranking for task specific purpose
+
 ### Learn to Rank with KoBERT
 
 Initial training is done by classifying whether the **title** of the dataset and the **question** are related pairs like below.
