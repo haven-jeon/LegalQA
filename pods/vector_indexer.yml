@@ -1,7 +1,7 @@
 jtype: DocVectorIndexer
 with:
   index_file_name: docvec.idx
-  aggr_chunks: avg    # none or min
+  aggr_chunks: min    # none or min
 metas:
   name: docvec
   description: vector indexer for embedding
