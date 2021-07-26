@@ -1,10 +1,12 @@
 jtype: BertReRanker
 with:
   model_name: skt/kobert-base-v1
-  max_seq_len: 256
+  max_seq_len: 128
   batch_size: 64
   max_epochs: 2
   gpus: 1
+  query_feature: tags__title
+  context_feature: tags__question
 metas:
   name: bert_ranker
   description: BERT ranking on top-k

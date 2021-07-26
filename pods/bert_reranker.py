@@ -25,6 +25,7 @@ import argparse
 import logging
 import os
 import random
+from itertools import cycle
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -290,8 +291,9 @@ class KoBERTReRanker(BaseModule):
 
 class BertReRanker(Executor):
     def __init__(self,
+                 query_feature: str,
+                 context_feature: str,
                  model_name: str = 'skt/kobert-base-v1',
-                 alpha: float = 0.7,
                  max_seq_len: int = 128,
                  batch_size: int = 64,
                  max_epochs: int = 3,
@@ -306,7 +308,8 @@ class BertReRanker(Executor):
             'model_name': model_name,
             'gpus': gpus
         }
-        self.alpha = alpha
+        self.query_feature = query_feature
+        self.context_feature = context_feature
         self.logger = JinaLogger(self.__class__.__name__)
 
     def _init_(self):
@@ -316,6 +319,7 @@ class BertReRanker(Executor):
         parser = ReRankDataModule.add_model_specific_args(parser)
         parser = pl.Trainer.add_argparse_args(parser)
         parser.add_argument('-t', type=str, default='train')
+        parser.add_argument('--top_k', '-k', type=int, default=3)
         args = parser.parse_args()
         args.batch_size = self.hparams['batch_size']
         args.max_seq_len = self.hparams['max_seq_len']
@@ -333,8 +337,8 @@ class BertReRanker(Executor):
 
         # prepare docs to train dataset, valdataset
         dataset = list(
-            zip(docs.get_attributes('tags__title'),
-                docs.get_attributes('tags__question')))
+            zip(docs.get_attributes(self.query_feature),
+                docs.get_attributes(self.context_feature)))
 
         self.ranker = KoBERTReRanker(args)
         self.dm = ReRankDataModule(train_dataset=dataset, **vars(args))
@@ -372,7 +376,7 @@ class BertReRanker(Executor):
         args.model_name = model_path
         if model_path:
             self.ranker = KoBERTReRanker(args)
-            self.dm = ReRankerDataset(None, self.hparams['model_name'], self.hparams['max_seq_len'])
+            self.dm = ReRankerDataset(None, max_seq_len=self.hparams['max_seq_len'])
         else:
             logger.warning(
                 f'Model {model_path} does not exist. Please specify the correct model_path inside parameters.'
@@ -388,25 +392,28 @@ class BertReRanker(Executor):
         :param docs: :class:`DocumentArray` passed by the user or previous executor.
         :param kwargs: Additional key value arguments.
         """
-        model_path = parameters.get('model_path', None)
-        if os.path.exists(model_path):
-            for doc in docs:
-                query = doc.content
-                for match in doc.matches:
-                    context = match.tags.get('question')
-                    encoded = self.dm._encode(query, context)
-                    logits = self.ranker(encoded['input_ids'].unsqueeze(dim=0),
-                                         encoded['attention_mask'].unsqueeze(dim=0),
-                                         encoded['token_type_ids'].unsqueeze(dim=0)).logits
-                    probs = torch.nn.functional.softmax(logits, dim=1)
-                    prob = probs[:, ReRankerDataset.
-                                 label_to_int['positive']].squeeze().cpu(
-                                 ).detach().numpy().item()
-                    # score = (1.0 - self.alpha) * match.scores['cosine'].value) + self.alpha * prob
-                    match.scores['bert_rerank'] = prob
-                doc.matches.sort(key=lambda ma: ma.scores['relevance'].value,
-                                 reverse=True)
-        else:
-            logger.warning(
-                f'model {self.model_path} does not exist. Please train your model first.'
-                'docs without changes will be passed to the next Executor!')
+        # model_path = parameters.get('model_path', None)
+        for doc in docs:
+            query = doc.content
+            contexts = doc.matches.get_attributes(self.context_feature)
+            input_ids = []
+            attention_mask = []
+            token_type_ids = []
+            for q, c in zip(cycle([query]), contexts):
+                encoded = self.dm._encode(q, c)
+                input_ids.append(encoded['input_ids'])
+                attention_mask.append(encoded['attention_mask'])
+                token_type_ids.append(encoded['token_type_ids'])
+            input_ids = torch.stack(input_ids)
+            attention_mask = torch.stack(attention_mask)
+            token_type_ids = torch.stack(token_type_ids)
+            logits = self.ranker(input_ids, attention_mask, token_type_ids).logits
+            probs = torch.nn.functional.softmax(logits, dim=1)
+            prob = probs[:, ReRankerDataset.
+                            label_to_int['positive']].squeeze().cpu(
+                            ).detach().numpy().tolist()
+            prob = prob if type(prob) is list else [prob] 
+            for m, p in zip(doc.matches, prob):
+                m.scores['bert_rerank'] = p
+            doc.matches.sort(key=lambda ma: ma.scores['bert_rerank'].value,
+                             reverse=True)

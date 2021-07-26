@@ -10,5 +10,5 @@ executors:
     uses: pods/vector_indexer.yml
   - name: KeyValIndexer
     uses: pods/keyval_lmdb.yml
-#  - name: BertReRanker
-#    uses: pods/bert_ranker.yml
+  - name: BertReRanker
+    uses: pods/bert_ranker.yml

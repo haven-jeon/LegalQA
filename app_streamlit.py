@@ -6,7 +6,7 @@ import streamlit.components.v1 as components
 from PIL import Image
 
 headers = {
-    'Content-Type': 'text/text; charset=utf-8'
+    'Content-Type': 'application/json; charset=utf-8'
 }
 
 # Set default endpoint. Usually this would be passed to a function via a parameter
@@ -34,18 +34,21 @@ class text:
                         "data": [query]
                     }
             response = requests.post(endpoint, headers=headers, json=data)
-
             content = response.json()["data"]["docs"]
             results = []
             for doc in content:
                 matches = doc["matches"]  # list
                 for match in matches:
                     score = match['scores']['cosine']['value']
+                    bert_score = match['scores']['bert_rerank']['value']
                     title = match["tags"]["title"]
                     question = match["tags"]["question"]
                     answer = match["tags"]["answer"]
-                    results.append(OrderedDict({'score': score, 'title': title, 'question': question, 'answer': answer}))
-
+                    results.append(OrderedDict({'base_score': score,
+                                                'bert_score': bert_score, 
+                                                'title': title,
+                                                'question': question,
+                                                'answer': answer}))
             return results
 
 

@@ -21,9 +21,8 @@ def print_topk(resp, sentence):
         print(f"\n\n\nTa-Dah🔮, here's what we found for: {sentence}")
         for idx, match in enumerate(doc.matches):
             score = match.scores['cosine'].value
-            if score < 0.0:
-                continue
-            print(f'> {idx:>2d}({score:.2f}). {match.text}')
+            bert_score = match.scores['bert_rerank'].value
+            print(f'> {idx:>2d}({score:.2f}, {bert_score:.2f}). {match.text}')
         print('\n\n\n')
 
 
@@ -51,7 +50,7 @@ def index():
 def query(top_k):
     f = Flow().load_config("flows/query.yml").plot(output='query.svg')
     with f:
-        #f.post('/load', parameters={'model_path': 'rerank_model'})
+        f.post('/load', parameters={'model_path': 'gogamza/kobert-legalqa-v1'})
         while True:
             text = input("Please type a sentence: ")
             if not text:
@@ -61,7 +60,7 @@ def query(top_k):
                 print_topk(x, text)
 
             f.search(Document(text=text),
-                     parameters={'top_k': top_k, 'model_path': 'rerank_model'},
+                     parameters={'top_k': top_k, 'model_path': 'gogamza/kobert-legalqa-v1'},
                      on_done=ppr)
 
 
@@ -70,8 +69,9 @@ def query_restful():
                            override_with={
                                'protocol': 'http',
                                'port_expose': int(os.environ["JINA_PORT"])
-                           })
+                            })
     with f:
+        f.post('/load', parameters={'model_path': 'gogamza/kobert-legalqa-v1'})
         f.block()
 
 
