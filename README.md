@@ -68,7 +68,7 @@ The SentenceKoBART is not a model tuned based on the legal task, so it guarantee
 - Model : Ranking for general purpose
 - Learn to Rank : Ranking for task specific purpose
 
-### Learn to Rank with KoBERT
+### Learn to Rank with [KoBERT](https://github.com/SKTBrain/KoBERT)
 
 Initial training is done by classifying whether the **title** of the dataset and the **question** are related pairs like below.
 
