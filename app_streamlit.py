@@ -111,7 +111,7 @@ class jina:
             if "endpoint" not in hidden:
                 endpoint = st.text_input("Endpoint", endpoint)
 
-            query = st.text_input("Enter query", value='조의금 소유는 누가 하는건가요?')
+            query = st.text_input("Enter query", value='다른 사람의 땅에 나무를 심었는데 누구 소유인가요?')
             print(f'Query: {query}')
 
             if "top_k" not in hidden:
