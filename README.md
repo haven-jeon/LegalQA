@@ -72,6 +72,10 @@ The SentenceKoBART is not a model tuned based on the legal task, so it guarantee
 
 Initial training is done by classifying whether the **title** of the dataset and the **question** are related pairs like below.
 
+Why BERT?
+
+- To use BERT NSP power.
+
 > [CLS] title [SEP] question [SEP]
 
 | title  |  question | label | 
