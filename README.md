@@ -150,6 +150,7 @@ python app.py -t query_restful --query_flow flows/query_annoy_rerank.yml
 - **Retrieval time**(sec.)
   - AMD Ryzen 5 PRO 4650U, 16 GB Memory
   - Average of 100 searches
+  - Excluding BertReRanker
 
 | top-k |  Numpy |  Hnswlib |  Faiss  |  Annoy | 
 |:-----:|:------:|:----:|:-----:|:-----:|
