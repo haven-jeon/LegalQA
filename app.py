@@ -2,7 +2,6 @@ __copyright__ = "Copyright (c) 2021 Heewon Jeon"
 
 import os
 import json
-from timeit import default_timer as timer
 
 import click
 from jina import Flow, Document
@@ -40,14 +39,15 @@ def _pre_processing(texts):
 def index():
     f = Flow().load_config("flows/index.yml").plot(output='index.svg')
     work_place = os.path.join(os.path.dirname(__file__),
-                                os.environ.get('JINA_WORKSPACE', None))
+                              os.environ.get('JINA_WORKSPACE', None))
 
     with f:
         data_path = os.path.join(os.path.dirname(__file__),
                                  os.environ.get('JINA_DATA_FILE', None))
         f.post('/index',
                _pre_processing(open(data_path, 'rt').readlines()),
-               show_progress=True, parameters={'traversal_paths': ['r', 'c']})
+               show_progress=True,
+               parameters={'traversal_paths': ['r', 'c']})
         f.post('/dump',
                target_peapod='KeyValIndexer',
                parameters={
@@ -56,44 +56,34 @@ def index():
                    'timeout': -1
                })
 
-# queries = ['아버지가 돌아가시고 조문객들이 낸 부의금의 분배', '유실수의 소유권은 누구에게 귀속되는지 여부',
-#            '사위가 장인 재산을 상속받을 수 있는지 여부',
-#            '경매신청된 토지수용 시 기업자의 수용절차는 경락자를 상대로 해야 하는지 여부',
-#            '녹색등화가 점멸되고 있을때 횡단보도 진입 후 사고당한 경우', 
-#            '편도 1차로에 정차한 버스 앞서려고 황색실선 중앙선 넘어간 경우',
-#            '건너가는 피해자를 발견하고 급정거하였으나 피하지 못하고 충격',
-#            '달려오던 영업택시에 충격 당하여 전치 3주의 상해를', 
-#            '행정소송 진행 중 원고 사망 시 상속인의 승계 가능 여부',
-#            '부(父)의 사망과 인지(認知)'] * 10
 
-def query(top_k):
-    f = Flow().load_config("flows/query_hnswlib_rerank.yml").plot(output='query.svg')
+def query(top_k, query_flow):
+    f = Flow().load_config(query_flow).plot(
+        output='query.svg')
     with f:
         f.post('/load', parameters={'model_path': 'gogamza/kobert-legalqa-v1'})
-        # t = []
-        # for text in queries:
         while True:
             text = input("Please type a sentence: ")
             if not text:
                 break
+
             def ppr(x):
                 print_topk(x, text)
-            # start = timer()
+
             f.search(Document(text=text),
-                     parameters={'top_k': top_k, 'model_path': 'gogamza/kobert-legalqa-v1'},
+                     parameters={
+                         'top_k': top_k,
+                         'model_path': 'gogamza/kobert-legalqa-v1'
+                     },
                      on_done=ppr)
-            # end = timer()
-            # print(f'elapse time : {end - start} sec.')
-            # t.append(end - start)
-        # print(sum(t)/len(t))
 
 
-def query_restful():
-    f = Flow().load_config("flows/query.yml",
+def query_restful(query_flow):
+    f = Flow().load_config(query_flow,
                            override_with={
                                'protocol': 'http',
                                'port_expose': int(os.environ["JINA_PORT"])
-                            })
+                           })
     with f:
         f.post('/load', parameters={'model_path': 'gogamza/kobert-legalqa-v1'})
         f.block()
@@ -111,33 +101,34 @@ def train():
         data_path = os.path.join(os.path.dirname(__file__),
                                  os.environ.get('JINA_DATA_FILE', None))
         f.post('/train',
-              _pre_processing(open(data_path, 'rt').readlines()),
-              show_progress=True, parameters={'traversal_paths': ['r', 'c']},
-              request_size=0)
-        #f.post('/load',
-        #      parameters={'model_path': 'kobert_model'})
+               _pre_processing(open(data_path, 'rt').readlines()),
+               show_progress=True,
+               parameters={'traversal_paths': ['r', 'c']},
+               request_size=0)
 
 
 def dump():
     f = Flow().add(uses='pods/keyval_lmdb.yml').plot(output='dump.svg')
     with f:
-        f.post('/dump', parameters={
-                'dump_path': 'dumps/',
-                'shards': 1,
-                'timeout': -1}
-        )
-
+        f.post('/dump',
+               parameters={
+                   'dump_path': 'dumps/',
+                   'shards': 1,
+                   'timeout': -1
+               })
 
 
 @click.command()
 @click.option(
     "--task",
     "-t",
-    type=click.Choice(["index", "query", "query_restful", "dryrun", "train", "dump"],
-                      case_sensitive=False),
+    type=click.Choice(
+        ["index", "query", "query_restful", "dryrun", "train", "dump"],
+        case_sensitive=False),
 )
 @click.option("--top_k", "-k", default=3)
-def main(task, top_k):
+@click.option('--query_flow', type=click.Path(exists=True), default='flows/query_numpy_rerank.yml')
+def main(task, top_k, query_flow):
     config()
     workspace = os.environ["JINA_WORKSPACE"]
     if task == "index":
@@ -155,13 +146,13 @@ def main(task, top_k):
             print(
                 f"The directory {workspace} does not exist. Please index first via `python app.py -t index`"
             )
-        query(top_k)
+        query(top_k, query_flow)
     if task == "query_restful":
         if not os.path.exists(workspace):
             print(
                 f"The directory {workspace} does not exist. Please index first via `python app.py -t index`"
             )
-        query_restful()
+        query_restful(query_flow)
     if task == "dryrun":
         dryrun()
     if task == 'train':
