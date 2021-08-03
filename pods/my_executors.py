@@ -30,6 +30,9 @@ from jina.logging.logger import JinaLogger
 from jina.types.arrays.memmap import DocumentArrayMemmap
 
 from jinahub.indexers.storage.LMDBStorage import LMDBStorage
+from jinahub.indexers.searcher.AnnoySearcher import AnnoySearcher
+from jinahub.indexers.searcher.HnswlibSearcher import HnswlibSearcher
+from jinahub.indexers.searcher.FaissSearcher import FaissSearcher
 
 
 class Segmenter(Executor):
@@ -80,14 +83,14 @@ class Segmenter(Executor):
 
     @requests
     def segment(self, docs: DocumentArray, parameters: Dict, **kwargs):
-        traversal_path = parameters.get('traversal_paths', self.default_traversal_path)
+        traversal_path = parameters.get('traversal_paths',
+                                        self.default_traversal_path)
         f_docs = docs.traverse_flat(traversal_path)
         for doc in f_docs:
             text = doc.text
             chunks = self._split(text)
             for c in chunks:
-                doc.chunks += [(Document(**c,
-                                         mime_type='text/plain'))]
+                doc.chunks += [(Document(**c, mime_type='text/plain'))]
 
 
 class DocVectorIndexer(Executor):
@@ -117,7 +120,8 @@ class DocVectorIndexer(Executor):
             for d in self._docs:
                 b = np.stack(d.chunks.get_attributes('embedding'))
                 d_emb = _ext_B(_norm(b))
-                dists = _cosine(q_emb, d_emb) * d.chunks.get_attributes('weight')  # cosine distance
+                dists = _cosine(q_emb, d_emb) * d.chunks.get_attributes(
+                    'weight')  # cosine distance
                 if self.aggr_chunks == 'min':
                     aggr_chunk_dist.append(dists[:, np.argmin(dists)])
                 elif self.aggr_chunks == 'avg':
@@ -167,6 +171,183 @@ class KeyValueIndexer(Executor):
                     match.update(extracted_doc)
 
 
+class AnnoyFastSearcher(AnnoySearcher):
+    def __init__(self, index_file_name: str, buffer_k: int = 5, **kwargs):
+        super().__init__(**kwargs)
+        self.buffer_k = buffer_k
+        self._docs = DocumentArray(
+            DocumentArrayMemmap(self.workspace + f'/{index_file_name}'))
+        self._docs_flat = self._docs.traverse_flat(
+            self.default_traversal_paths)
+
+    @requests(on='/search')
+    def search(self, docs: DocumentArray, parameters: Dict, **kwargs):
+        if not hasattr(self, '_indexer'):
+            self.logger.warning('Querying against an empty index')
+            return
+
+        traversal_paths = parameters.get('traversal_paths',
+                                         self.default_traversal_paths)
+
+        top_k = parameters.get(
+            'top_k',
+            self.default_top_k,
+        )
+
+        for doc in docs.traverse_flat(traversal_paths):
+            # multiply avg. number of setences on each document
+            indices, dists = self._indexer.get_nns_by_vector(
+                doc.embedding,
+                int(top_k * self.buffer_k),
+                include_distances=True)
+            id_score = {}
+            for idx, dist in zip(indices, dists):
+                idx_id = str(self._ids[idx])
+                p_id = self._docs_flat[idx_id].parent_id if self._docs_flat[
+                    idx_id].parent_id != '' else str(idx)
+                match = Document(self._docs[p_id], copy=True)
+                match.embedding = self._vecs[idx]
+                if self.is_distance:
+                    if self.metric == 'dot':
+                        match.scores[self.metric] = 1 - dist
+                    else:
+                        match.scores[self.metric] = dist
+                else:
+                    if self.metric == 'dot':
+                        match.scores[self.metric] = dist
+                    elif self.metric == 'angular' or self.metric == 'hamming':
+                        if self.metric == 'angular':
+                            match.scores['cosine'] = 1 - dist
+                        else:
+                            match.scores[self.metric] = 1 - dist
+                    else:
+                        match.scores[self.metric] = 1 / (1 + dist)
+                if p_id not in id_score:
+                    id_score[p_id] = True
+                    doc.matches.append(match)
+                    if len(doc.matches) >= top_k:
+                        break
+            if len(doc.matches) < top_k:
+                self.logger.warning("Please increase 'buffer_k'")
+
+
+class HnswlibFastSearcher(HnswlibSearcher):
+    def __init__(self, index_file_name: str, buffer_k: int = 5, **kwargs):
+        super().__init__(**kwargs)
+        self.buffer_k = buffer_k
+        self._docs = DocumentArray(
+            DocumentArrayMemmap(self.workspace + f'/{index_file_name}'))
+        self._docs_flat = self._docs.traverse_flat(
+            self.default_traversal_paths)
+
+    @requests(on='/search')
+    def search(self, docs: DocumentArray, parameters: Dict, **kwargs):
+        if not hasattr(self, '_indexer'):
+            self.logger.warning('Querying against an empty index')
+            return
+
+        traversal_paths = parameters.get('traversal_paths',
+                                         self.default_traversal_paths)
+
+        top_k = parameters.get(
+            'top_k',
+            self.default_top_k,
+        )
+
+        for doc in docs.traverse_flat(traversal_paths):
+            # multiply avg. number of setences on each document
+            indices, dists = self._indexer.knn_query(doc.embedding,
+                                                     k=int(top_k *
+                                                           self.buffer_k))
+            id_score = {}
+            for idx, dist in zip(indices[0], dists[0]):
+                idx_id = str(self._ids[int(idx)])
+                p_id = self._docs_flat[idx_id].parent_id if self._docs_flat[
+                    idx_id].parent_id != '' else int(idx)
+                match = Document(self._docs[p_id], copy=True)
+                match.embedding = self._vecs[int(idx)]
+                if self.is_distance:
+                    match.scores[self.metric] = dist
+                else:
+                    if self.metric == 'cosine' or self.metric == 'ip':
+                        match.scores[self.metric] = 1 - dist
+                    else:
+                        match.scores[self.metric] = 1 / (1 + dist)
+                if p_id not in id_score:
+                    id_score[p_id] = True
+                    doc.matches.append(match)
+                    if len(doc.matches) >= top_k:
+                        break
+            if len(doc.matches) < top_k:
+                self.logger.warning("Please increase 'buffer_k'")
+
+
+class FaissFastSearcher(FaissSearcher):
+    def __init__(self, index_file_name: str, buffer_k: int = 5, **kwargs):
+        super().__init__(**kwargs)
+        self.buffer_k = buffer_k
+        self._docs = DocumentArray(
+            DocumentArrayMemmap(self.workspace + f'/{index_file_name}'))
+        self._docs_flat = self._docs.traverse_flat(
+            self.default_traversal_paths)
+
+    @requests(on='/search')
+    def search(self,
+               docs: DocumentArray,
+               parameters: Optional[Dict] = None,
+               *args,
+               **kwargs):
+        """Find the top-k vectors with smallest ``metric`` and return their ids in ascending order.
+        :param docs: the DocumentArray containing the documents to search with
+        :param parameters: the parameters for the request
+        """
+        if not hasattr(self, 'index'):
+            self.logger.warning('Querying against an empty Index')
+            return
+
+        if parameters is None:
+            parameters = {}
+
+        top_k = parameters.get('top_k', self.default_top_k)
+        traversal_paths = parameters.get('traversal_paths',
+                                         self.default_traversal_paths)
+
+        query_docs = docs.traverse_flat(traversal_paths)
+
+        vecs = np.array(query_docs.get_attributes('embedding'))
+
+        if self.normalize:
+            from faiss import normalize_L2
+            normalize_L2(vecs)
+        dists, ids = self.index.search(vecs, int(top_k * self.buffer_k))
+        id_score = {}
+        if self.metric == 'inner_product':
+            dists = 1 - dists
+        for doc_idx, dist in enumerate(zip(ids, dists)):
+            for m_info in zip(*dist):
+                idx, distance = m_info
+                idx_id = str(self._ids[int(idx)])
+                p_id = self._docs_flat[idx_id].parent_id if self._docs_flat[
+                    idx_id].parent_id != '' else int(idx)
+                match = Document(self._docs[p_id], copy=True)
+                match.embedding = self._vecs[int(idx)]
+                if self.is_distance:
+                    match.scores[self.metric] = distance
+                else:
+                    if self.metric == 'inner_product':
+                        match.scores[self.metric] = 1 - distance
+                    else:
+                        match.scores[self.metric] = 1 / (1 + distance)
+
+                if p_id not in id_score:
+                    id_score[p_id] = True
+                    query_docs[doc_idx].matches.append(match)
+                    if len(query_docs[doc_idx].matches) >= top_k:
+                        break
+            if len(query_docs[doc_idx].matches) < top_k:
+                self.logger.warning("Please increase 'buffer_k'")
+
+
 class FilterBy(Executor):
     def __init__(self, cutoff: float = -1.0, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -180,47 +361,6 @@ class FilterBy(Executor):
                 if match.scores__cosine__value >= self.cutoff:
                     filtered_matches.append(match)
             doc.matches = filtered_matches
-
-
-class WeightedRanker(Executor):
-    @requests(on='/search')
-    def rank(self, docs_matrix: List['DocumentArray'], parameters: Dict,
-             **kwargs) -> 'DocumentArray':
-        """
-        :param docs_matrix: list of :class:`DocumentArray` on multiple requests to
-          get bubbled up matches.
-        :param parameters: the parameters passed into the ranker, in this case stores :attr`top_k`
-          to filter k results based on score.
-        :param kwargs: not used (kept to maintain interface)
-        """
-
-        result_da = DocumentArray(
-        )  # length: 1 as every time there is only one query
-        for d_mod1, d_mod2 in zip(*docs_matrix):
-
-            final_matches = {}  # type: Dict[str, Document]
-
-            for m in d_mod1.matches:
-                m.scores[
-                    'relevance'] = m.scores['cosine'].value * d_mod1.weight
-                final_matches[m.parent_id] = Document(m, copy=True)
-
-            for m in d_mod2.matches:
-                if m.parent_id in final_matches:
-                    final_matches[
-                        m.parent_id].scores['relevance'] = final_matches[
-                            m.parent_id].scores['relevance'].value + (
-                                m.scores['cosine'].value * d_mod2.weight)
-                else:
-                    m.scores[
-                        'relevance'] = m.scores['cosine'].value * d_mod2.weight
-                    final_matches[m.parent_id] = Document(m, copy=True)
-
-            da = DocumentArray(list(final_matches.values()))
-            da.sort(key=lambda ma: ma.scores['relevance'].value, reverse=True)
-            d = Document(matches=da[:int(parameters['top_k'])])
-            result_da.append(d)
-        return result_da
 
 
 def _get_ones(x, y):
