@@ -38,17 +38,28 @@ def _pre_processing(texts):
 
 def index():
     f = Flow().load_config("flows/index.yml").plot(output='index.svg')
+    work_place = os.path.join(os.path.dirname(__file__),
+                              os.environ.get('JINA_WORKSPACE', None))
 
     with f:
         data_path = os.path.join(os.path.dirname(__file__),
                                  os.environ.get('JINA_DATA_FILE', None))
         f.post('/index',
                _pre_processing(open(data_path, 'rt').readlines()),
-               show_progress=True, parameters={'traversal_paths': ['r', 'c']})
+               show_progress=True,
+               parameters={'traversal_paths': ['r', 'c']})
+        f.post('/dump',
+               target_peapod='KeyValIndexer',
+               parameters={
+                   'dump_path': os.path.join(work_place, 'dumps/'),
+                   'shards': 1,
+                   'timeout': -1
+               })
 
 
-def query(top_k):
-    f = Flow().load_config("flows/query.yml").plot(output='query.svg')
+def query(top_k, query_flow):
+    f = Flow().load_config(query_flow).plot(
+        output='query.svg')
     with f:
         f.post('/load', parameters={'model_path': 'gogamza/kobert-legalqa-v1'})
         while True:
@@ -60,16 +71,19 @@ def query(top_k):
                 print_topk(x, text)
 
             f.search(Document(text=text),
-                     parameters={'top_k': top_k, 'model_path': 'gogamza/kobert-legalqa-v1'},
+                     parameters={
+                         'top_k': top_k,
+                         'model_path': 'gogamza/kobert-legalqa-v1'
+                     },
                      on_done=ppr)
 
 
-def query_restful():
-    f = Flow().load_config("flows/query.yml",
+def query_restful(query_flow):
+    f = Flow().load_config(query_flow,
                            override_with={
                                'protocol': 'http',
                                'port_expose': int(os.environ["JINA_PORT"])
-                            })
+                           })
     with f:
         f.post('/load', parameters={'model_path': 'gogamza/kobert-legalqa-v1'})
         f.block()
@@ -87,22 +101,34 @@ def train():
         data_path = os.path.join(os.path.dirname(__file__),
                                  os.environ.get('JINA_DATA_FILE', None))
         f.post('/train',
-              _pre_processing(open(data_path, 'rt').readlines()),
-              show_progress=True, parameters={'traversal_paths': ['r', 'c']},
-              request_size=0)
-        #f.post('/load',
-        #      parameters={'model_path': 'kobert_model'})    
-        f.post(on='/dump', parameters={'model_path': 'rerank_model'})
+               _pre_processing(open(data_path, 'rt').readlines()),
+               show_progress=True,
+               parameters={'traversal_paths': ['r', 'c']},
+               request_size=0)
+
+
+def dump():
+    f = Flow().add(uses='pods/keyval_lmdb.yml').plot(output='dump.svg')
+    with f:
+        f.post('/dump',
+               parameters={
+                   'dump_path': 'dumps/',
+                   'shards': 1,
+                   'timeout': -1
+               })
+
 
 @click.command()
 @click.option(
     "--task",
     "-t",
-    type=click.Choice(["index", "query", "query_restful", "dryrun", "train"],
-                      case_sensitive=False),
+    type=click.Choice(
+        ["index", "query", "query_restful", "dryrun", "train", "dump"],
+        case_sensitive=False),
 )
 @click.option("--top_k", "-k", default=3)
-def main(task, top_k):
+@click.option('--query_flow', type=click.Path(exists=True), default='flows/query_numpy_rerank.yml')
+def main(task, top_k, query_flow):
     config()
     workspace = os.environ["JINA_WORKSPACE"]
     if task == "index":
@@ -120,17 +146,19 @@ def main(task, top_k):
             print(
                 f"The directory {workspace} does not exist. Please index first via `python app.py -t index`"
             )
-        query(top_k)
+        query(top_k, query_flow)
     if task == "query_restful":
         if not os.path.exists(workspace):
             print(
                 f"The directory {workspace} does not exist. Please index first via `python app.py -t index`"
             )
-        query_restful()
+        query_restful(query_flow)
     if task == "dryrun":
         dryrun()
     if task == 'train':
         train()
+    if task == 'dump':
+        dump()
 
 
 if __name__ == "__main__":

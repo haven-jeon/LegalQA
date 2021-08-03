@@ -320,6 +320,7 @@ class BertReRanker(Executor):
         parser = pl.Trainer.add_argparse_args(parser)
         parser.add_argument('-t', type=str, default='train')
         parser.add_argument('--top_k', '-k', type=int, default=3)
+        parser.add_argument('--query_flow', type=str, default='query_hnswlib_rerank.yml')
         args = parser.parse_args()
         args.batch_size = self.hparams['batch_size']
         args.max_seq_len = self.hparams['max_seq_len']

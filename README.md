@@ -7,10 +7,11 @@
   - [Setup](#setup)
   - [Index](#index)
   - [Train](#train)
-    - [Learn to Rank with KoBERT](#learn-to-rank-with-kobert)
+    - [Learn to Rank with KoBERT](#learn-to-rank-with-koberthttpsgithubcomsktbrainkobert)
   - [Search](#search)
     - [With REST API](#with-rest-api)
     - [From the terminal](#from-the-terminal)
+      - [Approximate KNN Search](#approximate-knn-search)
   - [Presentation](#presentation)
   - [Demo](#demo)
   - [FAQ](#faq)
@@ -29,6 +30,7 @@ Implementation of legal QA system based on Sentence[KoBART](https://github.com/S
 - [How to train SentenceKoBART](SentenceKoBART)
 - Based on Neural Search Engine [Jina](https://github.com/jina-ai/jina) v2.0
 - [Provide Korean legal QA data](data/legalqa.jsonlines)(1,830 pairs)
+- [Apply approximate KNN search](#approximate-knn-search) with [Faiss](https://github.com/facebookresearch/faiss), [Annoy](https://github.com/spotify/annoy), [Hnswlib](https://github.com/nmslib/hnswlib).
 
 
 ## Setup
@@ -101,10 +103,11 @@ We provide a KoBERT model tuned with LegalQA([gogamza/kobert-legalqa-v1](https:/
 To start the Jina server for REST API:
 
 ```sh
-python app.py -t query_restful
+# python app.py -t query_restful --query_flow flows/query_numpy_rerank.yml
+python app.py -t query_restful 
 ```
 
-![](data/query.svg)
+![](data/query_numpy.svg)
 
 Then use a client to query:
 
@@ -114,11 +117,44 @@ curl --request POST -d '{"parameters": {"top_k": 1},  "data": ["상속 관련 �
 
 Or use [Jinabox](https://jina.ai/jinabox.js/) with endpoint `http://127.0.0.1:1234/search`
 
+
 ### From the terminal
 
 ```sh
+# python app.py -t query --query_flow flows/query_numpy_rerank.yml
 python app.py -t query
 ```
+
+#### Approximate KNN Search
+
+```sh
+python app.py -t query_restful --query_flow flows/query_hnswlib_rerank.yml
+```
+
+![](data/query_hnswlib.svg)
+
+
+```sh
+python app.py -t query_restful --query_flow flows/query_faiss_rerank.yml
+```
+
+![](data/query_faiss.svg)
+
+```sh
+python app.py -t query_restful --query_flow flows/query_annoy_rerank.yml
+```
+
+![](data/query_annoy.svg)
+
+
+- **Retrieval time**(sec.)
+  - AMD Ryzen 5 PRO 4650U, 16 GB Memory
+  - Average of 100 searches
+
+| top-k |  Numpy |  Hnswlib |  Faiss  |  Annoy | 
+|:-----:|:------:|:----:|:-----:|:-----:|
+|   10  |   1.433 |  0.101  |  0.131 |  0.118  |
+
 
 ## Presentation
 

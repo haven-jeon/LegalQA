@@ -5,10 +5,14 @@ pytorch-lightning == 1.3.8
 torchmetrics
 git+https://github.com/SKT-AI/KoBART@no_version_deps#egg=kobart
 torch==1.9.0
-jina[standard]==2.0.10
+jina[standard]==2.0.15
 streamlit
 git+git://github.com/jina-ai/jina-commons
 git+git://github.com/jina-ai/executor-indexers
+git+git://github.com/jina-ai/executors
 lmdb==1.2.1
+annoy==1.17.0
+faiss-cpu==1.6.5
+hnswlib==0.5.2
 git+https://github.com/SKTBrain/KoBERT.git#egg=kobert_tokenizer&subdirectory=kobert_hf
 sentencepiece
