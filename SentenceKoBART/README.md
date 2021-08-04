@@ -15,6 +15,15 @@
   - Train : 11,668
   - Test : 10
 
+### Preprocessing
+
+```sh
+cd data
+unzip data.zip
+python combine.py --kluests_file KLUE_STS/klue_sts_train.json --korsts_file KorSTS/sts-train.tsv --output sts_train.tsv
+python combine.py --kluests_file KLUE_STS/klue_sts_test.json --korsts_file KorSTS/sts-dev.tsv KorSTS/sts-test.tsv  --output sts_test.tsv
+```
+
 ### Hwo to train
 
 ```
