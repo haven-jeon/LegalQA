@@ -14,11 +14,14 @@
       - [Approximate KNN Search](#approximate-knn-search)
   - [Presentation](#presentation)
   - [Demo](#demo)
+  - [Links](#links)
   - [FAQ](#faq)
     - [Why this dataset?](#why-this-dataset)
     - [LFS quota is exceeded](#lfs-quota-is-exceeded)
   - [Citation](#citation)
   - [License](#license)
+
+<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
 
 <!-- /code_chunk_output -->
 
