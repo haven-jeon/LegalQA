@@ -104,6 +104,21 @@ class DocVectorIndexer(Executor):
     def index(self, docs: DocumentArray, **kwargs):
         self._docs.extend(docs)
 
+    @requests(on='/delete')
+    def delete(self, docs: DocumentArray, **kwargs):
+        if docs is None:
+            return
+        for doc in docs:
+            if doc.id in self._docs:
+                del self._docs[doc.id]
+    
+    @requests(on='/update')
+    def update(self, docs: DocumentArray, **kwargs):
+        if docs is None:
+            return
+        for doc in docs:
+            self._docs[doc.id] = doc
+
     @requests(on='/search')
     def search(self, docs: DocumentArray, parameters: Dict, **kwargs):
         if docs is None:
@@ -117,6 +132,7 @@ class DocVectorIndexer(Executor):
             dists = _cosine(q_emb, embedding_matrix)
         else:
             aggr_chunk_dist = []
+            doc_ids = []
             for d in self._docs:
                 b = np.stack(d.chunks.get_attributes('embedding'))
                 d_emb = _ext_B(_norm(b))
@@ -128,11 +144,13 @@ class DocVectorIndexer(Executor):
                     aggr_chunk_dist.append(np.average(dists, axis=1))
                 else:
                     assert False
+                doc_ids.append(d.id)
             dists = np.stack(aggr_chunk_dist, axis=1)
         idx, dist = self._get_sorted_top_k(dists, int(parameters['top_k']))
-        for _q, _ids, _dists in zip(docs, idx, dist):
+        ids = np.array(doc_ids)[idx.squeeze(0)]
+        for _q, _ids, _dists in zip(docs, ids, dist):
             for _id, _dist in zip(_ids, _dists):
-                d = Document(self._docs[int(_id)], copy=True)
+                d = Document(self._docs[_id], copy=True)
                 d.scores['cosine'] = 1 - _dist  # cosine sim.
                 _q.matches.append(d)
 

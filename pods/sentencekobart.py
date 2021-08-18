@@ -128,7 +128,7 @@ class KoSentenceBART(Executor):
         self.model.eval()
         self.model.to(torch.device(device))
 
-    @requests
+    @requests(on=['/search', '/index', '/update'])
     def encode(self, docs: Optional[DocumentArray], parameters: Dict,
                **kwargs):
         """

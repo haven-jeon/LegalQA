@@ -3,7 +3,7 @@ with:
   index_file_name: docvec.idx
   dump_path: "${JINA_WORKSPACE}/dumps"
   metric: l2
-  index_key: IVF10,PQ2"
+  index_key: IVF10,PQ2
   is_distance: false
   default_traversal_paths: ['r', 'c']
 metas:
