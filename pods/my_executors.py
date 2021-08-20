@@ -132,6 +132,7 @@ class DocVectorIndexer(Executor):
             dists = _cosine(q_emb, embedding_matrix)
         else:
             aggr_chunk_dist = []
+            # assume, it processes just one root query.
             doc_ids = []
             for d in self._docs:
                 b = np.stack(d.chunks.get_attributes('embedding'))
@@ -147,8 +148,10 @@ class DocVectorIndexer(Executor):
                 doc_ids.append(d.id)
             dists = np.stack(aggr_chunk_dist, axis=1)
         idx, dist = self._get_sorted_top_k(dists, int(parameters['top_k']))
-        ids = np.array(doc_ids)[idx.squeeze(0)]
-        for _q, _ids, _dists in zip(docs, ids, dist):
+        ids = np.expand_dims(np.array(doc_ids), 0).repeat(idx.shape[0], axis=0)
+        assert idx.shape[0] == ids.shape[0]
+        for _q, _idx, _ids,  _dists in zip(docs, idx, ids, dist):
+            _ids = _ids[_idx]
             for _id, _dist in zip(_ids, _dists):
                 d = Document(self._docs[_id], copy=True)
                 d.scores['cosine'] = 1 - _dist  # cosine sim.
