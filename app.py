@@ -31,7 +31,6 @@ def _pre_processing(texts):
     results = []
     for i in texts:
         d = json.loads(i)
-        d['text'] = d['title'].strip() + '. ' + d['question']
         results.append(Document(json.dumps(d, ensure_ascii=False)))
     return results
 

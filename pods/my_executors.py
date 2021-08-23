@@ -35,6 +35,20 @@ from jinahub.indexers.searcher.HnswlibSearcher import HnswlibSearcher
 from jinahub.indexers.searcher.FaissSearcher import FaissSearcher
 
 
+class Preprocess(Executor):
+    def __init__(self, default_traversal_path, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.default_traversal_path = default_traversal_path or ['r']
+
+    @requests(on=['/index', '/update'])
+    def preprocess(self, docs: DocumentArray, parameters: Dict, **kwargs):
+        traversal_path = parameters.get('traversal_paths',
+                                        self.default_traversal_path)
+        f_docs = docs.traverse_flat(traversal_path)
+        for doc in f_docs:
+            doc.text = doc.tags__title + '. ' + doc.tags__question
+
+
 class Segmenter(Executor):
     def __init__(self,
                  min_sent_len: int = 1,
@@ -81,14 +95,13 @@ class Segmenter(Executor):
                          location=[s, e]))
         return results
 
-    @requests
+    @requests(on=['/index', '/update'])
     def segment(self, docs: DocumentArray, parameters: Dict, **kwargs):
         traversal_path = parameters.get('traversal_paths',
                                         self.default_traversal_path)
         f_docs = docs.traverse_flat(traversal_path)
         for doc in f_docs:
-            text = doc.text
-            chunks = self._split(text)
+            chunks = self._split(doc.text)
             for c in chunks:
                 doc.chunks += [(Document(**c, mime_type='text/plain'))]
 
@@ -117,25 +130,27 @@ class DocVectorIndexer(Executor):
         if docs is None:
             return
         for doc in docs:
-            self._docs[doc.id] = doc
+            if doc.id in self._docs:
+                self._docs[doc.id] = doc
+            else:
+                self._docs.append(doc)
 
     @requests(on='/search')
     def search(self, docs: DocumentArray, parameters: Dict, **kwargs):
         if docs is None:
             return
-        a = np.stack(docs.get_attributes('embedding'))
+        a = docs.embeddings
         q_emb = _ext_A(_norm(a))
         # get chunk embeddings and 'min' aggr
         if self.aggr_chunks == 'none':
-            embedding_matrix = _ext_B(
-                _norm(np.stack(self._docs.get_attributes('embedding'))))
+            embedding_matrix = _ext_B(_norm(self._docs.embeddings))
             dists = _cosine(q_emb, embedding_matrix)
         else:
             aggr_chunk_dist = []
             # assume, it processes just one root query.
             doc_ids = []
             for d in self._docs:
-                b = np.stack(d.chunks.get_attributes('embedding'))
+                b = d.chunks.embeddings
                 d_emb = _ext_B(_norm(b))
                 dists = _cosine(q_emb, d_emb) * d.chunks.get_attributes(
                     'weight')  # cosine distance

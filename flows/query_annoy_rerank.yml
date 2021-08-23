@@ -4,6 +4,10 @@ with:
   title: LegalQA
   description: Korean LegalQA System
 executors:
+  - name: Preprocess
+    uses: pods/preprocess.yml
+  - name: SentenceSplitter
+    uses: pods/segment.yml
   - name: SentenceKoBART
     uses: pods/encode.yml
   - name: AnnoyFastSearcher
