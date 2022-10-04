@@ -26,11 +26,11 @@ from typing import Dict, List, Optional
 import pytorch_lightning as pl
 import torch
 
-from jina import DocumentArray, Executor, requests
-from jina_commons.batching import get_docs_batch_generator
+from jina import Executor, requests
 from jina.logging.logger import JinaLogger
-from kobart import get_kobart_tokenizer, get_pytorch_kobart_model
-from transformers import BartModel
+from docarray import DocumentArray
+#from kobart import get_kobart_tokenizer, get_pytorch_kobart_model
+from transformers import PreTrainedTokenizerFast, BartModel
 
 
 class PoolingHead(torch.nn.Module):
@@ -54,7 +54,7 @@ class KoBARTRegression(pl.LightningModule):
     def __init__(self, hparams, **kwargs):
         super(KoBARTRegression, self).__init__(**kwargs)
         self.save_hyperparameters(hparams)
-        self.model = BartModel.from_pretrained(get_pytorch_kobart_model())
+        self.model = BartModel.from_pretrained('gogamza/kobart-base-v1')
         self.pooling = PoolingHead(input_dim=self.model.config.d_model,
                                    inner_dim=self.model.config.d_model,
                                    pooler_dropout=0.1)
@@ -95,7 +95,7 @@ class KoSentenceBART(Executor):
         pretrained_model_path: str = 'model/SentenceKoBART.bin',
         max_length: int = 128,
         device: str = 'cpu',
-        default_traversal_paths: Optional[List[str]] = None,
+        default_traversal_paths: str = None,
         default_batch_size: int = 32,
         *args,
         **kwargs,
@@ -104,7 +104,7 @@ class KoSentenceBART(Executor):
         if default_traversal_paths is not None:
             self.default_traversal_paths = default_traversal_paths
         else:
-            self.default_traversal_paths = ['r']
+            self.default_traversal_paths = '@r'
         self.default_batch_size = default_batch_size
         self.pretrained_model_path = pretrained_model_path
         self.max_length = max_length
@@ -122,7 +122,7 @@ class KoSentenceBART(Executor):
             )
             device = 'cpu'
         self.device = device
-        self.tokenizer = get_kobart_tokenizer()
+        self.tokenizer = PreTrainedTokenizerFast.from_pretrained('gogamza/kobart-base-v1')
         self.model = KoBARTRegression.load_from_checkpoint(
             self.pretrained_model_path, hparams={'avg_type': 'norm_avg'})
         self.model.eval()
@@ -138,15 +138,12 @@ class KoSentenceBART(Executor):
                `parameters={'traversal_paths': ['r'], 'batch_size': 10}`.
         :param kwargs: Additional key value arguments.
         """
-        for batch in get_docs_batch_generator(
-                docs,
-                traversal_path=parameters.get('traversal_paths',
-                                              self.default_traversal_paths),
-                batch_size=parameters.get('batch_size',
-                                          self.default_batch_size),
-                needs_attr='text',
-        ):
-            texts = batch.get_attributes('text')
+        traversal_path=parameters.get('traversal_paths',self.default_traversal_paths)
+        batch_size=parameters.get('batch_size',
+                                    self.default_batch_size)
+        docs_flatten = docs[traversal_path]
+        for batch in DocumentArray(filter(lambda x: bool(x.text), docs_flatten)).batch(batch_size=batch_size):
+            texts = batch[:, 'text']
             processed_content = []
             for cont in texts:
                 processed_content.append(self.tokenizer.bos_token + cont +

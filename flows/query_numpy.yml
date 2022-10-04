@@ -6,11 +6,25 @@ with:
 executors:
   - name: Preprocess
     uses: pods/preprocess.yml
-  - name: SentenceSplitter
-    uses: pods/segment.yml
   - name: SentenceKoBART
     uses: pods/encode.yml
+    uses_with:
+      default_traversal_paths: '@r'
   - name: DocVecIndexer
-    uses: pods/vector_indexer.yml
+    uses: jinahub://SimpleIndexer
+    uses_with:
+      traversal_right: '@c'
+      traversal_left: '@r'
+    install_requirements: true
+  - name: ranker
+    uses: jinahub://SimpleRanker
+    uses_with:
+      traversal_paths: '@r'
+      ranking: min
+      metric: cosine
+    install_requirements: true
   - name: KeyValIndexer
-    uses: pods/keyval_lmdb.yml
+    uses: jinahub://LMDBStorage
+    install_requirements: true
+    uses_with:
+      default_traversal_paths: '@rm'

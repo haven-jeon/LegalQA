@@ -10,7 +10,13 @@ executors:
     uses: pods/segment.yml
   - name: SentenceKoBART
     uses: pods/encode.yml
+    uses_with:
+      default_traversal_paths: '@r,c'
   - name: DocVecIndexer
-    uses: pods/vector_indexer.yml
+    uses: jinahub://SimpleIndexer
+    install_requirements: true
   - name: KeyValIndexer
-    uses: pods/keyval_lmdb.yml
+    uses: jinahub://LMDBStorage
+    install_requirements: true
+    uses_with:
+      default_traversal_paths: '@r'

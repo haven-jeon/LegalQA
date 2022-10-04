@@ -4,12 +4,13 @@ import os
 import json
 
 import click
-from jina import Flow, Document
+from jina import Flow
+from docarray import Document
 
 
 def config():
     os.environ["JINA_DATA_FILE"] = os.environ.get("JINA_DATA_FILE",
-                                                  "data/legalqa.jsonlines")
+                                                  "data/legalqa_small.jsonlines")
     os.environ["JINA_WORKSPACE"] = os.environ.get("JINA_WORKSPACE",
                                                   "workspace")
 
@@ -28,15 +29,24 @@ def print_topk(resp, sentence):
 
 def _pre_processing(texts):
     print('start of pre-processing')
-    results = []
     for i in texts:
         d = json.loads(i)
-        results.append(Document(json.dumps(d, ensure_ascii=False)))
-    return results
+        yield Document(id=d['id'], text='', tags={'title': d['title'], 'question': d['question'], 'answer': d['answer']})
+            
+
+
+# def _pre_processing(texts):
+#     print('start of pre-processing')
+#     results = []
+#     for i in texts:
+#         d = json.loads(i)
+#         results.append(Document.from_dict(d))
+#     return results
 
 
 def index():
-    f = Flow().load_config("flows/index.yml").plot(output='index.svg')
+    f = Flow.load_config("flows/index.yml")
+    f.plot(output='index.svg')
     work_place = os.path.join(os.path.dirname(__file__),
                               os.environ.get('JINA_WORKSPACE', None))
 
@@ -44,9 +54,9 @@ def index():
         data_path = os.path.join(os.path.dirname(__file__),
                                  os.environ.get('JINA_DATA_FILE', None))
         f.post('/index',
-               _pre_processing(open(data_path, 'rt').readlines()),
-               show_progress=True,
-               parameters={'traversal_paths': ['r', 'c']})
+               inputs=_pre_processing(open(data_path, 'rt').readlines()),
+               show_progress=True)
+               #parameters={'traversal_paths': '@r,c'})
         f.post('/dump',
                target_peapod='KeyValIndexer',
                parameters={
@@ -57,8 +67,8 @@ def index():
 
 
 def query(top_k, query_flow):
-    f = Flow().load_config(query_flow).plot(
-        output='query.svg')
+    f = Flow.load_config(query_flow)
+    f.plot(output='query.svg')
     with f:
         f.post('/load', parameters={'model_path': 'gogamza/kobert-legalqa-v1'})
         while True:
@@ -69,7 +79,7 @@ def query(top_k, query_flow):
             def ppr(x):
                 print_topk(x, text)
 
-            f.search(Document(text=text),
+            f.search([Document(text=text)],
                      parameters={
                          'top_k': top_k,
                          'model_path': 'gogamza/kobert-legalqa-v1'
@@ -102,7 +112,7 @@ def train():
         f.post('/train',
                _pre_processing(open(data_path, 'rt').readlines()),
                show_progress=True,
-               parameters={'traversal_paths': ['r', 'c']},
+               parameters={'traversal_paths': '@r,c'},
                request_size=0)
 
 

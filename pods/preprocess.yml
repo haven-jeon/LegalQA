@@ -1,6 +1,6 @@
 jtype: Preprocess
 with:
-  default_traversal_path: ['r']
+  default_traversal_path: '@r'
 metas:
   name: preprocess
   description: preprocessing documents 

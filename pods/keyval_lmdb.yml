@@ -1,6 +1,6 @@
 jtype: LMDBStorage
 with:
-  default_traversal_paths: ['r']
+  default_traversal_paths: '@r'
 metas:
   name: keyval
   description: key-value indexer for embedding

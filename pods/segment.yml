@@ -1,7 +1,7 @@
 jtype: Segmenter
 with:
   punct_chars: '!?.'
-  default_traversal_path: ['r']
+  default_traversal_path: '@r'
   uniform_weight: true
 metas:
   name: segment

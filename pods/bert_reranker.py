@@ -30,7 +30,8 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import torch
-from jina import DocumentArray, Executor, requests
+from docarray import DocumentArray
+from jina import Executor, requests
 from jina.logging.logger import JinaLogger
 from torch.utils.data import DataLoader, Dataset
 import pytorch_lightning as pl
