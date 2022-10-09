@@ -1,8 +1,0 @@
-jtype: Flow
-with:
-  workspace: $JINA_WORKSPACE
-  title: LegalQA
-  description: Korean LegalQA System
-executors:
-  - name: BertReRanker
-    uses: pods/bert_ranker.yml

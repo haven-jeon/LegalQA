@@ -1,7 +1,0 @@
-jtype: Preprocess
-with:
-  default_traversal_path: '@r'
-metas:
-  name: preprocess
-  description: preprocessing documents 
-  py_modules: my_executors.py

@@ -1,8 +1,0 @@
-jtype: KoSentenceBART
-with:
-  device: cpu
-  pretrained_model_path: model/SentenceKoBART.bin
-metas:
-  name: encoder
-  description: KoSentenceBART Encoder for IR
-  py_modules: sentencekobart.py

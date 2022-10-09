@@ -57,9 +57,8 @@ class Segmenter(Executor):
                  punct_chars: Optional[List[str]] = None,
                  uniform_weight: bool = True,
                  default_traversal_path: str = None,
-                 *args,
                  **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         self.min_sent_len = min_sent_len
         self.max_sent_len = max_sent_len
         self.punct_chars = punct_chars
@@ -386,8 +385,8 @@ class KeyValueIndexer(Executor):
 
 
 class FilterBy(Executor):
-    def __init__(self, cutoff: float = -1.0, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, cutoff: float = -1.0, **kwargs):
+        super().__init__(**kwargs)
         self.cutoff = cutoff
 
     @requests
@@ -398,6 +397,27 @@ class FilterBy(Executor):
                 if match.scores__cosine__value >= self.cutoff:
                     filtered_matches.append(match)
             doc.matches = filtered_matches
+
+class DocCount(Executor):
+    def __init__(
+        self,
+        default_traversal_path: str = '@r',
+        n_dim: int = 768,
+        data_path: Optional[str] = None,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        config = {
+                'n_dim': n_dim,
+                'data_path': data_path or self.workspace or './workspace',
+            }
+        self._index = DocumentArray(storage='annlite', config=config)
+        self.traversal_path = default_traversal_path
+
+    @requests(on='/count')
+    def get_count(self, docs: DocumentArray, **kwargs):
+        for doc in docs:
+            doc.tags['doc_count'] = len(self._index[self.traversal_path])
 
 
 def _get_ones(x, y):

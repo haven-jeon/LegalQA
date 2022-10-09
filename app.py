@@ -9,8 +9,8 @@ from docarray import Document
 
 
 def config():
-    os.environ["JINA_DATA_FILE"] = os.environ.get("JINA_DATA_FILE",
-                                                  "data/legalqa_small.jsonlines")
+    os.environ["JINA_DATA_FILE"] = os.environ.get(
+        "JINA_DATA_FILE", "data/legalqa_small.jsonlines")
     os.environ["JINA_WORKSPACE"] = os.environ.get("JINA_WORKSPACE",
                                                   "workspace")
 
@@ -31,24 +31,18 @@ def _pre_processing(texts):
     print('start of pre-processing')
     for i in texts:
         d = json.loads(i)
-        yield Document(id=d['id'], text='', tags={'title': d['title'], 'question': d['question'], 'answer': d['answer']})
-            
-
-
-# def _pre_processing(texts):
-#     print('start of pre-processing')
-#     results = []
-#     for i in texts:
-#         d = json.loads(i)
-#         results.append(Document.from_dict(d))
-#     return results
+        yield Document(id=d['id'],
+                       text='',
+                       tags={
+                           'title': d['title'],
+                           'question': d['question'],
+                           'answer': d['answer']
+                       })
 
 
 def index():
-    f = Flow.load_config("flows/index.yml")
+    f = Flow.load_config("flows/index_numpy.yml")
     f.plot(output='index.svg')
-    work_place = os.path.join(os.path.dirname(__file__),
-                              os.environ.get('JINA_WORKSPACE', None))
 
     with f:
         data_path = os.path.join(os.path.dirname(__file__),
@@ -56,21 +50,19 @@ def index():
         f.post('/index',
                inputs=_pre_processing(open(data_path, 'rt').readlines()),
                show_progress=True)
-               #parameters={'traversal_paths': '@r,c'})
-        f.post('/dump',
-               target_peapod='KeyValIndexer',
-               parameters={
-                   'dump_path': os.path.join(work_place, 'dumps/'),
-                   'shards': 1,
-                   'timeout': -1
-               })
 
+def count():
+    f = Flow(protocol='http').add(uses='pods/counts.yml')
+    with f:
+        f.post('/count', inputs=['count'], on_done=get_result)
+
+def get_result(d):
+    print(f'Num of docs: {d.docs[0].tags["doc_count"]}')
 
 def query(top_k, query_flow):
     f = Flow.load_config(query_flow)
     f.plot(output='query.svg')
     with f:
-        f.post('/load', parameters={'model_path': 'gogamza/kobert-legalqa-v1'})
         while True:
             text = input("Please type a sentence: ")
             if not text:
@@ -81,62 +73,43 @@ def query(top_k, query_flow):
 
             f.search([Document(text=text)],
                      parameters={
-                         'top_k': top_k,
-                         'model_path': 'gogamza/kobert-legalqa-v1'
+                         'limit': top_k,
+                         'ef_search': top_k * 10
                      },
                      on_done=ppr)
 
-
-def query_restful(query_flow):
-    f = Flow().load_config(query_flow,
-                           override_with={
-                               'protocol': 'http',
-                               'port_expose': int(os.environ["JINA_PORT"])
-                           })
+def status():
+    f = Flow.load_config("flows/status.yml",
+                         uses_with={
+                             'protocol': 'http',
+                             'port': int(os.environ["JINA_PORT"]),
+                         })
+    f.plot(output='status.svg')
+    f.expose_endpoint('/status', summary='document status')
     with f:
-        f.post('/load', parameters={'model_path': 'gogamza/kobert-legalqa-v1'})
         f.block()
 
-
-def dryrun():
-    f = Flow().load_config("flows/index.yml")
+def query_restful(query_flow):
+    f = Flow.load_config(query_flow,
+                         uses_with={
+                             'protocol': 'http',
+                             'port': int(os.environ["JINA_PORT"]),
+                         })
     with f:
-        f.dry_run()
-
-
-def train():
-    f = Flow().load_config("flows/train.yml").plot(output='train.svg')
-    with f:
-        data_path = os.path.join(os.path.dirname(__file__),
-                                 os.environ.get('JINA_DATA_FILE', None))
-        f.post('/train',
-               _pre_processing(open(data_path, 'rt').readlines()),
-               show_progress=True,
-               parameters={'traversal_paths': '@r,c'},
-               request_size=0)
-
-
-def dump():
-    f = Flow().add(uses='pods/keyval_lmdb.yml').plot(output='dump.svg')
-    with f:
-        f.post('/dump',
-               parameters={
-                   'dump_path': 'dumps/',
-                   'shards': 1,
-                   'timeout': -1
-               })
+        f.block()
 
 
 @click.command()
 @click.option(
     "--task",
     "-t",
-    type=click.Choice(
-        ["index", "query", "query_restful", "dryrun", "train", "dump"],
-        case_sensitive=False),
+    type=click.Choice(["index", "query", "query_restful", "count"],
+                      case_sensitive=False),
 )
 @click.option("--top_k", "-k", default=3)
-@click.option('--query_flow', type=click.Path(exists=True), default='flows/query_numpy_rerank.yml')
+@click.option('--query_flow',
+              type=click.Path(exists=True),
+              default='flows/query_numpy.yml')
 def main(task, top_k, query_flow):
     config()
     workspace = os.environ["JINA_WORKSPACE"]
@@ -162,12 +135,12 @@ def main(task, top_k, query_flow):
                 f"The directory {workspace} does not exist. Please index first via `python app.py -t index`"
             )
         query_restful(query_flow)
-    if task == "dryrun":
-        dryrun()
-    if task == 'train':
-        train()
-    if task == 'dump':
-        dump()
+    if task == 'count':
+        if not os.path.exists(workspace):
+            print(
+                f"The directory {workspace} does not exist. Please index first via `python app.py -t index`"
+            )
+        count()
 
 
 if __name__ == "__main__":

@@ -62,7 +62,8 @@ python app.py -t index
 
 GPU-based indexing available as an option
 
-- `pods/encode.yml` - `device: cuda`
+- `pods/encode.yml` 
+- `device: cuda`
 
 ## Train
 

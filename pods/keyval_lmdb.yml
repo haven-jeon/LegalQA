@@ -1,8 +1,0 @@
-jtype: LMDBStorage
-with:
-  default_traversal_paths: '@r'
-metas:
-  name: keyval
-  description: key-value indexer for embedding
-  py_modules: my_executors.py
-

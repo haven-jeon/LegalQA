@@ -1,9 +1,0 @@
-jtype: Segmenter
-with:
-  punct_chars: '!?.'
-  default_traversal_path: '@r'
-  uniform_weight: true
-metas:
-  name: segment
-  description: segment document using punctuation 
-  py_modules: my_executors.py

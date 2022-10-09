@@ -5,15 +5,21 @@ with:
   description: Korean LegalQA System
 executors:
   - name: Preprocess
-    uses: pods/preprocess.yml
-  - name: SentenceKoBART
-    uses: pods/encode.yml
+    uses: Preprocess
     uses_with:
+      default_traversal_path: '@r'
+    py_modules: [executors/my_executors.py]
+  - name: SentenceKoBART
+    uses: KoSentenceBART
+    uses_with:
+      device: cpu
+      pretrained_model_path: model/SentenceKoBART.bin
       default_traversal_paths: '@r'
+    py_modules: [executors/sentencekobart.py]
   - name: DocVecIndexer
     uses: jinahub://SimpleIndexer
     uses_with:
-      traversal_right: '@c'
+      traversal_right: '@r,c'
       traversal_left: '@r'
     install_requirements: true
   - name: ranker
@@ -25,6 +31,6 @@ executors:
     install_requirements: true
   - name: KeyValIndexer
     uses: jinahub://LMDBStorage
-    install_requirements: true
     uses_with:
       default_traversal_paths: '@rm'
+    install_requirements: true
