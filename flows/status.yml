@@ -1,0 +1,13 @@
+jtype: Flow
+with:
+  workspace: $JINA_WORKSPACE
+  title: LegalQA
+  description: Korean LegalQA System
+  protocol: HTTP
+executors:
+  - name: DocCount
+    uses: DocCount
+    uses_with:
+      n_dim: 768
+      default_traversal_path: '@r'
+      data_path: $JINA_WORKSPACE/annlite

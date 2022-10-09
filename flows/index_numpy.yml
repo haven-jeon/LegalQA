@@ -1,0 +1,33 @@
+jtype: Flow
+with:
+  workspace: $JINA_WORKSPACE
+  title: LegalQA
+  description: Korean LegalQA System
+executors:
+  - name: Preprocess
+    uses: Preprocess
+    uses_with:
+      default_traversal_path: '@r'
+    py_modules: [executors/my_executors.py]
+  - name: Segmenter
+    uses: Segmenter
+    uses_with:
+      punct_chars: '!?.'
+      default_traversal_path: '@r'
+      uniform_weight: true
+    py_modules: [executors/my_executors.py]
+  - name: SentenceKoBART
+    uses: KoSentenceBART
+    uses_with:
+      device: cpu
+      pretrained_model_path: model/SentenceKoBART.bin
+      default_traversal_paths: '@r,c'
+    py_modules: [executors/sentencekobart.py]
+  - name: DocVecIndexer
+    uses: jinahub://SimpleIndexer
+    install_requirements: true
+  - name: KeyValIndexer
+    uses: jinahub://LMDBStorage
+    uses_with:
+      default_traversal_paths: '@r'
+    install_requirements: true
