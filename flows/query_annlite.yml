@@ -17,10 +17,13 @@ executors:
       default_traversal_paths: '@r'
     py_modules: [executors/sentencekobart.py]
   - name: DocVecIndexer
-    uses: jinahub://SimpleIndexer
+    uses: jinahub://AnnLiteIndexer
     uses_with:
-      traversal_right: '@r,c'
-      traversal_left: '@r'
+      n_dim: 768
+      metric: cosine
+      data_path: $JINA_WORKSPACE/annlite
+      search_access_paths: '@r'
+      index_access_paths: '@r,c'
     install_requirements: true
   - name: ranker
     uses: jinahub://SimpleRanker

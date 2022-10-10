@@ -28,24 +28,27 @@ class text:
             Process Jina's JSON output and parse results
             """
             data = {
-                        "parameters": {
-                            "top_k": top_k,
-                        },
-                        "data": [query]
+                "data": [
+                    {
+                    "text": query
                     }
+                ],
+                "targetExecutor": "",
+                "parameters": {"limit": top_k}
+                }
             response = requests.post(endpoint, headers=headers, json=data)
-            content = response.json()["data"]["docs"]
+            content = response.json()["data"]
             results = []
             for doc in content:
                 matches = doc["matches"]  # list
                 for match in matches:
+                    if match["parent_id"] != None:
+                        continue
                     score = match['scores']['cosine']['value']
-                    bert_score = match['scores']['bert_rerank']['value']
                     title = match["tags"]["title"]
                     question = match["tags"]["question"]
                     answer = match["tags"]["answer"]
                     results.append(OrderedDict({'base_score': score,
-                                                'bert_score': bert_score, 
                                                 'title': title,
                                                 'question': question,
                                                 'answer': answer}))
@@ -106,7 +109,7 @@ class image:
 
 class jina:
     def text_search(endpoint=DEFAULT_ENDPOINT, top_k=10, hidden=[]):
-        container = st.beta_container()
+        container = st.container()
         with container:
             if "endpoint" not in hidden:
                 endpoint = st.text_input("Endpoint", endpoint)
@@ -127,7 +130,7 @@ class jina:
         return container
 
     def image_search(endpoint=DEFAULT_ENDPOINT, top_k=10, hidden=[]):
-        container = st.beta_container()
+        container = st.container()
         with container:
             if "endpoint" not in hidden:
                 endpoint = st.text_input("Endpoint", endpoint)
