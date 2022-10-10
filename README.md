@@ -46,7 +46,7 @@ git clone https://github.com/haven-jeon/LegalQA.git
 cd LegalQA
 git lfs pull
 # If the lfs quota is exceeded, please download it with the command below.
-# wget http://gogamza.ipdisk.co.kr:80/gogamzapubs/VOL1/URLs/models/SentenceKoBART.bin
+# https://drive.google.com/file/d/1DJFMknxT7OAAWYFV_WGW2UcCxmuf3cp_/view?usp=sharing
 # mv SentenceKoBART.bin model/
 pip install -r requirements.txt
 ```
@@ -58,46 +58,11 @@ pip install -r requirements.txt
 python app.py -t index
 ```
 
-![](data/index.svg)
+![](data/index_numpy.svg)
 
 GPU-based indexing available as an option
 
-- `pods/encode.yml` 
 - `device: cuda`
-
-## Train
-
-The SentenceKoBART is not a model tuned based on the legal task, so it guarantees good recall, but requires adjustment in terms of precision. By re-ranking the results of top-k using a cross-encoder, we can supplement in terms of precision.
-
-![](data/learntorank.jpg)
-
-- Model : Ranking for general purpose
-- Learn to Rank : Ranking for task specific purpose
-
-### Learn to Rank with [KoBERT](https://github.com/SKTBrain/KoBERT)
-
-Initial training is done by classifying whether the **title** of the dataset and the **question** are related pairs like below.
-
-Why BERT?
-
-- To use BERT NSP power.
-
-> [CLS] title [SEP] question [SEP]
-
-| title  |  question | label | 
-|---|---|----|
-| 오토바이의 고속도로 주행금지가 행복추구권 등을 침해한 것은 아닌지 여부  | 甲은 평소 오토바이를 좋아하여 주말, 휴일이면 오토바이로 전국을 여행하였습니다. 그런데 ...  | positive |
-| 피해자과실로 인한 교통사고로 개인택시사업면허가 취소된 경우  | 甲은 평소 오토바이를 좋아하여 주말, 휴일이면 오토바이로 전국을 여행하였습니다. 그런데 ...  | negative |
-
-```bash
-python app.py -t train
-```
-
-![](data/train.svg)
-
-The trained model is saved in the `rerank_model` directory.
-
-We provide a KoBERT model tuned with LegalQA([gogamza/kobert-legalqa-v1](https://huggingface.co/gogamza/kobert-legalqa-v1)).
 
 
 ## Search
@@ -107,8 +72,8 @@ We provide a KoBERT model tuned with LegalQA([gogamza/kobert-legalqa-v1](https:/
 To start the Jina server for REST API:
 
 ```sh
-# python app.py -t query_restful --query_flow flows/query_numpy_rerank.yml
-python app.py -t query_restful 
+# python app.py -t query_restful --flow flows/query_numpy.yml
+python app.py -t query_restful
 ```
 
 ![](data/query_numpy.svg)
@@ -116,39 +81,31 @@ python app.py -t query_restful
 Then use a client to query:
 
 ```sh
-curl --request POST -d '{"parameters": {"top_k": 1},  "data": ["상속 관련 문의"]}' -H 'Content-Type: application/json' 'http://0.0.0.0:1234/search'
+curl --request POST -d '{"parameters": {"limit": 1},  "data": ["상속 관련 문의"]}' -H 'Content-Type: application/json' 'http://0.0.0.0:1234/search'
 ````
-
-Or use [Jinabox](https://jina.ai/jinabox.js/) with endpoint `http://127.0.0.1:1234/search`
 
 
 ### From the terminal
 
 ```sh
-# python app.py -t query --query_flow flows/query_numpy_rerank.yml
+# python app.py -t query --flow flows/query_numpy.yml
 python app.py -t query
 ```
 
-#### Approximate KNN Search
+#### Approximate KNN Search with [AnnLite](https://github.com/jina-ai/annlite)
 
 ```sh
-python app.py -t query_restful --query_flow flows/query_hnswlib_rerank.yml
+python app.py -t index --flow flows/index_annlite.yml
 ```
 
-![](data/query_hnswlib.svg)
+![](data/index_annlite.svg)
 
 
 ```sh
-python app.py -t query_restful --query_flow flows/query_faiss_rerank.yml
+python app.py -t query --flow flows/query_annlite.yml
 ```
 
-![](data/query_faiss.svg)
-
-```sh
-python app.py -t query_restful --query_flow flows/query_annoy_rerank.yml
-```
-
-![](data/query_annoy.svg)
+![](data/query_annlite.svg)
 
 
 - **Retrieval time**(sec.)
@@ -156,7 +113,7 @@ python app.py -t query_restful --query_flow flows/query_annoy_rerank.yml
   - Average of 100 searches
   - Excluding BertReRanker
 
-| top-k |  Numpy |  Hnswlib |  Faiss  |  Annoy | 
+| top-k |  Numpy |  AnnLite |  Faiss  |  Annoy | 
 |:-----:|:------:|:----:|:-----:|:-----:|
 |   10  |   1.433 |  0.101  |  0.131 |  0.118  |
 
@@ -170,7 +127,7 @@ python app.py -t query_restful --query_flow flows/query_annoy_rerank.yml
 
 ## Demo 
 
-- [To Demo](http://ec2-3-36-123-253.ap-northeast-2.compute.amazonaws.com:7874/)
+- Working!
 
 | ![](data/demo.gif)|
 | ------ |
@@ -189,8 +146,7 @@ Legal data is composed of technical terms, so it is difficult to search if you a
 
 You can download `SentenceKoBART.bin` from one of the two links below.
 
-- http://gogamza.ipdisk.co.kr:80/gogamzapubs/VOL1/URLs/models/SentenceKoBART.bin
-- https://komodels.s3.ap-northeast-2.amazonaws.com/models/SentenceKoBART.bin
+- https://drive.google.com/file/d/1DJFMknxT7OAAWYFV_WGW2UcCxmuf3cp_/view?usp=sharing
 
 ## Citation
 

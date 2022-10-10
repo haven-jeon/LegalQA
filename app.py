@@ -40,8 +40,8 @@ def _pre_processing(texts):
                        })
 
 
-def index():
-    f = Flow.load_config("flows/index_numpy.yml")
+def index(index_flow):
+    f = Flow.load_config(index_flow)
     f.plot(output='index.svg')
 
     with f:
@@ -107,10 +107,10 @@ def query_restful(query_flow):
                       case_sensitive=False),
 )
 @click.option("--top_k", "-k", default=3)
-@click.option('--query_flow',
+@click.option('--flow',
               type=click.Path(exists=True),
               default='flows/query_numpy.yml')
-def main(task, top_k, query_flow):
+def main(task, top_k, flow):
     config()
     workspace = os.environ["JINA_WORKSPACE"]
     if task == "index":
@@ -122,19 +122,19 @@ def main(task, top_k, query_flow):
                     \n |                                   🤖🤖🤖                                         | \
                     \n +----------------------------------------------------------------------------------+'
             )
-        index()
+        index(flow)
     if task == "query":
         if not os.path.exists(workspace):
             print(
                 f"The directory {workspace} does not exist. Please index first via `python app.py -t index`"
             )
-        query(top_k, query_flow)
+        query(top_k, flow)
     if task == "query_restful":
         if not os.path.exists(workspace):
             print(
                 f"The directory {workspace} does not exist. Please index first via `python app.py -t index`"
             )
-        query_restful(query_flow)
+        query_restful(flow)
     if task == 'count':
         if not os.path.exists(workspace):
             print(

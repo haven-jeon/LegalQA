@@ -1,6 +1,7 @@
 click
 transformers 
 pytorch-lightning 
-jina 
+jina == 3.9.1
 torch 
-docarray
+lmdb
+streamlit
