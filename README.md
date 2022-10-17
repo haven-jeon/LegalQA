@@ -6,12 +6,10 @@
 - [LegalQA using SentenceKoBART](#legalqa-using-sentencekobart)
   - [Setup](#setup)
   - [Index](#index)
-  - [Train](#train)
-    - [Learn to Rank with KoBERT](#learn-to-rank-with-koberthttpsgithubcomsktbrainkobert)
   - [Search](#search)
     - [With REST API](#with-rest-api)
-    - [From the terminal](#from-the-terminal)
-      - [Approximate KNN Search](#approximate-knn-search)
+      - [Approximate KNN Search with AnnLite](#approximate-knn-search-with-annlite)
+    - [Production Ready Neural Search with HNSWPostgresIndexer](#production-ready-neural-search-with-hnswpostgresindexer)
   - [Presentation](#presentation)
   - [Demo](#demo)
   - [Links](#links)
@@ -48,6 +46,7 @@ git lfs pull
 # If the lfs quota is exceeded, please download it with the command below.
 # https://drive.google.com/file/d/1DJFMknxT7OAAWYFV_WGW2UcCxmuf3cp_/view?usp=sharing
 # mv SentenceKoBART.bin model/
+# pip install --use-deprecated=legacy-resolver  -r requirements.txt 
 pip install -r requirements.txt
 ```
 
@@ -117,6 +116,22 @@ python app.py -t query --flow flows/query_annlite.yml
 |:-----:|:------:|:----:|:-----:|:-----:|
 |   10  |   1.433 |  0.101  |  0.131 |  0.118  |
 
+### Production Ready Neural Search with [HNSWPostgresIndexer](https://hub.jina.ai/executor/dvp0845a)
+
+
+```sh
+docker run -e POSTGRES_PASSWORD=123456 -p 127.0.0.1:5432:5432/tcp postgres:13.2
+python app.py -t index --flow flows/index_psqlhnsw.yml
+```
+
+![](data/index_psqlhnsw.svg)
+
+
+```sh
+python app.py -t query --flow flows/query_psqlhnsw.yml
+```
+
+![](data/query_psqlhnsw.svg)
 
 ## Presentation
 
