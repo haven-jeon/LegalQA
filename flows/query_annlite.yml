@@ -4,11 +4,6 @@ with:
   title: LegalQA
   description: Korean LegalQA System
 executors:
-  - name: Preprocess
-    uses: Preprocess
-    uses_with:
-      default_traversal_path: '@r'
-    py_modules: [executors/my_executors.py]
   - name: SentenceKoBART
     uses: KoSentenceBART
     uses_with:
@@ -17,23 +12,22 @@ executors:
       default_traversal_paths: '@r'
     py_modules: [executors/sentencekobart.py]
   - name: DocVecIndexer
-    uses: jinahub://AnnLiteIndexer
+    uses: jinaai://haven-jeon/AnnliteIndexerCRUD:latest
     uses_with:
-      n_dim: 768
+      dim: 768
       metric: cosine
-      data_path: $JINA_WORKSPACE/annlite
       search_access_paths: '@r'
       index_access_paths: '@r,c'
     install_requirements: true
   - name: ranker
-    uses: jinahub://SimpleRanker
+    uses: jinaai://haven-jeon/SimpleRankerCRUD:latest
     uses_with:
       traversal_paths: '@r'
       ranking: min
       metric: cosine
     install_requirements: true
   - name: KeyValIndexer
-    uses: jinahub://LMDBStorage
+    uses: jinaai://jina-ai/LMDBStorage:latest
     uses_with:
       default_traversal_paths: '@rm'
     install_requirements: true

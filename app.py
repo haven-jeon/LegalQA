@@ -32,12 +32,18 @@ def _pre_processing(texts):
     for i in texts:
         d = json.loads(i)
         yield Document(id=d['id'],
-                       text='',
+                       text=d['title'] + '. ' + d['question'],
                        tags={
                            'title': d['title'],
                            'question': d['question'],
                            'answer': d['answer']
                        })
+
+def _pre_processing_note(data_path: str):
+    jd = json.load(open(data_path, 'r'))
+    for l in jd:
+        #l.pop('id', None)
+        yield Document(id = l['id'], text= l['text'], tags=l['tags'])
 
 
 def index(index_flow):
