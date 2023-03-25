@@ -1,4 +1,9 @@
-https://user-images.githubusercontent.com/957840/227705344-27501a6f-1e0b-48c0-854d-62ebc8d3160d.mp4
+# LegalQA using SentenceKoBART and OpenAI ChatGPT
+
+![](data/flow.png)
+
+| https://user-images.githubusercontent.com/957840/227705344-27501a6f-1e0b-48c0-854d-62ebc8d3160d.mp4 |
+| ------ |
 
 
 
@@ -23,8 +28,6 @@ https://user-images.githubusercontent.com/957840/227705344-27501a6f-1e0b-48c0-85
 	/vscode-markdown-toc-config -->
 <!-- /vscode-markdown-toc -->
 
-
-# LegalQA using SentenceKoBART and OpenAI ChatGPT
 
 Implementation of legal QA system based on Sentence[KoBART](https://github.com/SKT-AI/KoBART)
 
