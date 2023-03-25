@@ -1,0 +1,40 @@
+jtype: Flow
+with:
+  workspace: $JINA_WORKSPACE
+  title: LegalQA
+  description: Korean LegalQA System
+executors:
+  - name: SentenceKoBART
+    uses: KoSentenceBART
+    uses_with:
+      device: cpu
+      pretrained_model_path: model/SentenceKoBART.bin
+      default_traversal_paths: '@r'
+    py_modules: [executors/sentencekobart.py]
+  - name: DocVecIndexer
+    uses: jinaai://haven-jeon/AnnliteIndexerCRUD:latest
+    uses_with:
+      dim: 768
+      metric: cosine
+      search_access_paths: '@r'
+      index_access_paths: '@r,c'
+    install_requirements: true
+  - name: ranker
+    uses: jinaai://haven-jeon/SimpleRankerCRUD:latest
+    uses_with:
+      traversal_paths: '@r'
+      ranking: min
+      metric: cosine
+    install_requirements: true
+  - name: KeyValIndexer
+    uses: jinaai://jina-ai/LMDBStorage:latest
+    uses_with:
+      default_traversal_paths: '@rm'
+    install_requirements: true
+  - name: AIResponse
+    uses: AddAIResponse
+    uses_with:
+      api_type: openaichat
+      cutoff: 0.7
+      max_length: 100
+    py_modules: [executors/my_executors.py]
