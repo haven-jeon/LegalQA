@@ -1,5 +1,7 @@
 click
 jina[standard]
 transformers
-pytorch-lightning 
+pytorch-lightning == 1.6.0 
 streamlit
+kss
+

@@ -91,6 +91,14 @@ OPENAI_API_KEY=$OPENAI_KEY python app.py -t query --flow flows/query_annlite_ope
 
 ![](data/query_restful.svg)
 
+## Run Chat Demo
+
+```bash
+OPENAI_API_KEY=$OPENAI_KEY python app.py -t query_restful --flow flows/query_annlite_openai.yml
+streamlit run chat.py
+```
+
+
 ##  3. <a name='Presentation'></a>Presentation
 
 - [Neural IR 101](http://tiny.one/neuralIR101)
