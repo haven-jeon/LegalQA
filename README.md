@@ -71,6 +71,8 @@ python app.py -t query --flow flows/query_annlite.yml
 python app.py -t query_restful --flow flows/query_annlite.yml
 ```
 
+![](data/query_annlite.svg)
+
 ####  2.2.1. <a name='RetrievalAugmentedResponsewithOpenAIChatGPT'></a>Retrieval Augmented Response with OpenAI ChatGPT
 
 - Get OpenAI API from https://platform.openai.com/account/api-keys
@@ -78,6 +80,7 @@ python app.py -t query_restful --flow flows/query_annlite.yml
 ```sh
 OPENAI_API_KEY=$OPENAI_KEY python app.py -t query --flow flows/query_annlite_openai.yml
 ```
+
 
 ![](data/query_restful.svg)
 
