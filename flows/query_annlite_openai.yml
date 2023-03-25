@@ -31,3 +31,10 @@ executors:
     uses_with:
       default_traversal_paths: '@rm'
     install_requirements: true
+  - name: AIResponse
+    uses: AddAIResponse
+    uses_with:
+      api_type: openaichat
+      cutoff: 0.7
+      max_length: 100
+    py_modules: [executors/my_executors.py]

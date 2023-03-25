@@ -23,6 +23,7 @@
 
 import re
 from typing import Dict, List, Optional, Tuple
+import requests as req
 
 import numpy as np
 from docarray import Document, DocumentArray
@@ -30,10 +31,18 @@ from jina import Executor, requests
 from jina.logging.logger import JinaLogger
 from docarray.array.sqlite import SqliteConfig
 
-# from jinahub.indexers.storage.LMDBStorage import LMDBStorage
-# from jinahub.indexers.searcher.AnnoySearcher import AnnoySearcher
-# from jinahub.indexers.searcher.HnswlibSearcher import HnswlibSearcher
-# from jinahub.indexers.searcher.FaissSearcher import FaissSearcher
+from langchain.chat_models import ChatOpenAI
+
+import kss
+
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
+from langchain.schema import (
+    SystemMessage,
+    HumanMessage,
+    AIMessage
+)
+from langchain.prompts.chat import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate
 
 
 class Preprocess(Executor):
@@ -206,182 +215,118 @@ class KeyValueIndexer(Executor):
                     extracted_doc = self._docs[match.parent_id]
                     match.update(extracted_doc)
 
+class RestAPIEmbedding(Executor):
+    def __init__(self, endpoint: str = None, dim: int = 764, whitening: bool = False, default_batch_size: int = 32, default_traversal_paths: str = None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.logger = JinaLogger(
+            getattr(self.metas, 'name', self.__class__.__name__))
+        self.endpoint = endpoint
+        self.dim = dim
+        if default_traversal_paths is not None:
+            self.default_traversal_paths = default_traversal_paths
+        else:
+            self.default_traversal_paths = '@r'
+        self.default_batch_size = default_batch_size
+        self.whitening = whitening
 
-# class AnnoyFastSearcher(AnnoySearcher):
-#     def __init__(self, index_file_name: str, buffer_k: int = 5, **kwargs):
-#         super().__init__(**kwargs)
-#         self.buffer_k = buffer_k
-#         self._docs = DocumentArray(
-#             DocumentArray(self.workspace + f'/{index_file_name}'))
-#         self._docs_flat = self._docs.traverse_flat(
-#             self.default_traversal_paths)
-
-#     @requests(on='/search')
-#     def search(self, docs: DocumentArray, parameters: Dict, **kwargs):
-#         if not hasattr(self, '_indexer'):
-#             self.logger.warning('Querying against an empty index')
-#             return
-
-#         traversal_paths = parameters.get('traversal_paths',
-#                                          self.default_traversal_paths)
-
-#         top_k = parameters.get(
-#             'top_k',
-#             self.default_top_k,
-#         )
-
-#         for doc in docs.traverse_flat(traversal_paths):
-#             # multiply avg. number of setences on each document
-#             indices, dists = self._indexer.get_nns_by_vector(
-#                 doc.embedding,
-#                 int(top_k * self.buffer_k),
-#                 include_distances=True)
-#             id_score = {}
-#             for idx, dist in zip(indices, dists):
-#                 idx_id = str(self._ids[idx])
-#                 p_id = self._docs_flat[idx_id].parent_id if self._docs_flat[
-#                     idx_id].parent_id != '' else str(idx)
-#                 match = Document(self._docs[p_id], copy=True)
-#                 match.embedding = self._vecs[idx]
-#                 if self.is_distance:
-#                     if self.metric == 'dot':
-#                         match.scores[self.metric] = 1 - dist
-#                     else:
-#                         match.scores[self.metric] = dist
-#                 else:
-#                     if self.metric == 'dot':
-#                         match.scores[self.metric] = dist
-#                     elif self.metric == 'angular' or self.metric == 'hamming':
-#                         if self.metric == 'angular':
-#                             match.scores['cosine'] = 1 - dist
-#                         else:
-#                             match.scores[self.metric] = 1 - dist
-#                     else:
-#                         match.scores[self.metric] = 1 / (1 + dist)
-#                 if p_id not in id_score:
-#                     id_score[p_id] = True
-#                     doc.matches.append(match)
-#                     if len(doc.matches) >= top_k:
-#                         break
-#             if len(doc.matches) < top_k:
-#                 self.logger.warning("Please increase 'buffer_k'")
+    
+    def api(self, texts: List[str], endpoint: str, whitening:bool, dim: int):
+        headers = {
+            'Content-Type': 'application/json; charset=utf-8'
+        }
+        response = req.post(endpoint, headers=headers, json={"texts": texts, "whitening":whitening, "dim":dim})
+        if response.status_code == 200:
+            embedding = response.json()['embeddings']
+            embedding = np.array(embedding)
+            assert embedding.shape[0] ==  len(texts)
+            return embedding
+        else:
+            self.logger.error(f'API call failed: {response.status_code}')
 
 
-# class HnswlibFastSearcher(HnswlibSearcher):
-#     def __init__(self, index_file_name: str, buffer_k: int = 5, **kwargs):
-#         super().__init__(**kwargs)
-#         self.buffer_k = buffer_k
-#         self._docs = DocumentArray(
-#             DocumentArray(self.workspace + f'/{index_file_name}'))
-#         self._docs_flat = self._docs.traverse_flat(
-#             self.default_traversal_paths)
-
-#     @requests(on='/search')
-#     def search(self, docs: DocumentArray, parameters: Dict, **kwargs):
-#         if not hasattr(self, '_indexer'):
-#             self.logger.warning('Querying against an empty index')
-#             return
-
-#         traversal_paths = parameters.get('traversal_paths',
-#                                          self.default_traversal_paths)
-
-#         top_k = parameters.get(
-#             'top_k',
-#             self.default_top_k,
-#         )
-
-#         for doc in docs.traverse_flat(traversal_paths):
-#             # multiply avg. number of setences on each document
-#             indices, dists = self._indexer.knn_query(doc.embedding,
-#                                                      k=int(top_k *
-#                                                            self.buffer_k))
-#             id_score = {}
-#             for idx, dist in zip(indices[0], dists[0]):
-#                 idx_id = str(self._ids[int(idx)])
-#                 p_id = self._docs_flat[idx_id].parent_id if self._docs_flat[
-#                     idx_id].parent_id != '' else int(idx)
-#                 match = Document(self._docs[p_id], copy=True)
-#                 match.embedding = self._vecs[int(idx)]
-#                 if self.is_distance:
-#                     match.scores[self.metric] = dist
-#                 else:
-#                     if self.metric == 'cosine' or self.metric == 'ip':
-#                         match.scores[self.metric] = 1 - dist
-#                     else:
-#                         match.scores[self.metric] = 1 / (1 + dist)
-#                 if p_id not in id_score:
-#                     id_score[p_id] = True
-#                     doc.matches.append(match)
-#                     if len(doc.matches) >= top_k:
-#                         break
-#             if len(doc.matches) < top_k:
-#                 self.logger.warning("Please increase 'buffer_k'")
+    @requests(on=['/search', '/index', '/update'])
+    def restapi_encode(self, docs: DocumentArray, parameters: Dict, **kwargs):
+        traversal_path=parameters.get('traversal_paths',self.default_traversal_paths)
+        batch_size=int(parameters.get('batch_size',
+                                      self.default_batch_size))
+        dim = int(parameters.get('dim', self.dim))
+        endpoint = parameters.get('endpoint', self.endpoint)
+        whitening = parameters.get('whitening', self.whitening)
+        docs_flatten = docs[traversal_path]
+        for batch in DocumentArray(filter(lambda x: bool(x.text), docs_flatten)).batch(batch_size=batch_size):
+            texts = batch[:, 'text']
+            embedding = self.api(texts, endpoint, whitening, dim)
+            for doc, embed in zip(batch, embedding):
+                doc.embedding = embed[:dim, ]
 
 
-# class FaissFastSearcher(FaissSearcher):
-#     def __init__(self, index_file_name: str, buffer_k: int = 5, **kwargs):
-#         super().__init__(**kwargs)
-#         self.buffer_k = buffer_k
-#         self._docs = DocumentArray(
-#             DocumentArray(self.workspace + f'/{index_file_name}'))
-#         self._docs_flat = self._docs.traverse_flat(
-#             self.default_traversal_paths)
 
-#     @requests(on='/search')
-#     def search(self,
-#                docs: DocumentArray,
-#                parameters: Optional[Dict] = None,
-#                *args,
-#                **kwargs):
-#         """Find the top-k vectors with smallest ``metric`` and return their ids in ascending order.
-#         :param docs: the DocumentArray containing the documents to search with
-#         :param parameters: the parameters for the request
-#         """
-#         if not hasattr(self, 'index'):
-#             self.logger.warning('Querying against an empty Index')
-#             return
+class AddAIResponse(Executor):
+    def __init__(self, cutoff: float = 0.3, api_type: str = 'openaichat', model_name:str = "text-davinci-003", *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.logger = JinaLogger(
+            getattr(self.metas, 'name', self.__class__.__name__))
+        self.api_type = api_type
+        self.model_name = model_name
+        self.cutoff = cutoff
 
-#         if parameters is None:
-#             parameters = {}
+    def chatgpt_prompt(self, query: str, search_results: str, answer_max_length: int = 100):
+        system_prompt = SystemMessagePromptTemplate.from_template(
+                'When a Legal information for the Question is given, Write an explanatory answer related to the Question is created based on it. However, be sure to follow the instructions below.'
+                '1. Write an explanatory answer by referring to the Legal information only related to the Question.'
+                '2. Reference the number(ex: [1]-(1), [2]-(3),..) of the Legal information that is the basis when writing an explanation answer.'
+                '3. Keep it short and easy to understand.'
+                '4. Answer with Korean.'
+                '5. You keep responses to no more than {character_limit} characters long (including whitespace).'
+            )
+        human_template = HumanMessagePromptTemplate.from_template(
+            'Question: {query}\n\n'
+            'Legal information: {search_results}'
+        )
 
-#         top_k = parameters.get('top_k', self.default_top_k)
-#         traversal_paths = parameters.get('traversal_paths',
-#                                          self.default_traversal_paths)
+        # create the human message
+        chat_prompt = ChatPromptTemplate.from_messages([system_prompt, human_template])
+        # format with some input
+        chat_prompt_value = chat_prompt.format_prompt(
+            character_limit=answer_max_length,
+            query=query,
+            search_results=search_results
+        )
+        #chat_prompt_value.to_string()
+        #chat_prompt.append(chat_prompt_value.to_messages()[0])
+        return chat_prompt_value.to_messages()
 
-#         query_docs = docs.traverse_flat(traversal_paths)
+    @requests(on=['/search'])
+    def add_ai_response(self, docs: DocumentArray, parameters: Dict, **kwargs):
+        api_type = parameters.get('api_type', self.api_type)
+        cutoff = float(parameters.get('cutoff', self.cutoff))
+        answer_max_length = float(parameters.get('max_length', 100))
+        llm = ''
+        if api_type == 'openaichat':
+            llm = ChatOpenAI(model_name="gpt-3.5-turbo")
+        else:
+            self.logger.error('invalid api_type')
+            assert False
+        answers: List[str] = []
+        r_num = 0
+        for doc in docs:
+            for match in doc.matches:
+                if match.scores["cosine"].value <= cutoff:
+                    answers.append(f'[{r_num + 1}]: ' + '"' + match.tags['answer'] + '"')
+                    r_num += 1
+        self.logger.info('\n'.join(answers))
+        if len(answers) > 0:
+            try:
+                ai_response:str = llm(self.chatgpt_prompt(query=docs[0].text, search_results='\n'.join(answers[0]), answer_max_length=answer_max_length)).content
+            except:
+                sents = []
+                for sent in kss.split_sentences(answers[0]):
+                    sents.append(sent)
+                ai_response:str = llm(self.chatgpt_prompt(query=docs[0].text, search_results='[0]: "' + ' '.join(sents[-3:]) + "\"", answer_max_length=answer_max_length)).content
+            docs[0].tags['ai_response'] = ai_response
+        else:
+            docs[0].tags['ai_response'] = ''
 
-#         vecs = np.array(query_docs.get_attributes('embedding'))
-
-#         if self.normalize:
-#             from faiss import normalize_L2
-#             normalize_L2(vecs)
-#         dists, ids = self.index.search(vecs, int(top_k * self.buffer_k))
-#         id_score = {}
-#         if self.metric == 'inner_product':
-#             dists = 1 - dists
-#         for doc_idx, dist in enumerate(zip(ids, dists)):
-#             for m_info in zip(*dist):
-#                 idx, distance = m_info
-#                 idx_id = str(self._ids[int(idx)])
-#                 p_id = self._docs_flat[idx_id].parent_id if self._docs_flat[
-#                     idx_id].parent_id != '' else int(idx)
-#                 match = Document(self._docs[p_id], copy=True)
-#                 match.embedding = self._vecs[int(idx)]
-#                 if self.is_distance:
-#                     match.scores[self.metric] = distance
-#                 else:
-#                     if self.metric == 'inner_product':
-#                         match.scores[self.metric] = 1 - distance
-#                     else:
-#                         match.scores[self.metric] = 1 / (1 + distance)
-
-#                 if p_id not in id_score:
-#                     id_score[p_id] = True
-#                     query_docs[doc_idx].matches.append(match)
-#                     if len(query_docs[doc_idx].matches) >= top_k:
-#                         break
-#             if len(query_docs[doc_idx].matches) < top_k:
-#                 self.logger.warning("Please increase 'buffer_k'")
 
 
 class FilterBy(Executor):
@@ -452,3 +397,12 @@ def _norm(A):
 
 def _cosine(A_norm_ext, B_norm_ext):
     return A_norm_ext.dot(B_norm_ext).clip(min=0) / 2
+
+
+if __name__ == '__main__':
+    from jina import Flow
+
+    f = Flow().add(uses=AddAIResponse)
+    with f:
+         res = f.search([Document(text="아버지가 방에 들어가신다."), Document(text="아버지가 방에 들어가신다.")], parameters={'api_type':'openai', 'cutoff': 0.3})
+         print(res[0].tags)

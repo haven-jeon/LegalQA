@@ -20,6 +20,7 @@ def config():
 def print_topk(resp, sentence):
     for doc in resp.data.docs:
         print(f"\n\n\nTa-Dah🔮, here's what we found for: {sentence}")
+        print(">> " + doc.tags['ai_response'])
         for idx, match in enumerate(doc.matches):
             score = match.scores['cosine'].value
             bert_score = match.scores['bert_rerank'].value
@@ -32,13 +33,12 @@ def _pre_processing(texts):
     for i in texts:
         d = json.loads(i)
         yield Document(id=d['id'],
-                       text='',
+                       text=d['title'] + '. ' + d['question'],
                        tags={
                            'title': d['title'],
                            'question': d['question'],
                            'answer': d['answer']
                        })
-
 
 def index(index_flow):
     f = Flow.load_config(index_flow)
@@ -95,6 +95,7 @@ def query_restful(query_flow):
                              'protocol': 'http',
                              'port': int(os.environ["JINA_PORT"]),
                          })
+    f.plot(output='query_restful.svg')
     with f:
         f.block()
 
@@ -109,7 +110,7 @@ def query_restful(query_flow):
 @click.option("--top_k", "-k", default=3)
 @click.option('--flow',
               type=click.Path(exists=True),
-              default='flows/query_numpy.yml')
+              default='flows/query_annlite.yml')
 def main(task, top_k, flow):
     config()
     workspace = os.environ["JINA_WORKSPACE"]

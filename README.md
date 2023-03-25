@@ -1,30 +1,33 @@
+# LegalQA using SentenceKoBART and OpenAI ChatGPT
 
-<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
+![](data/flow.png)
 
-<!-- code_chunk_output -->
-
-- [LegalQA using SentenceKoBART](#legalqa-using-sentencekobart)
-  - [Setup](#setup)
-  - [Index](#index)
-  - [Search](#search)
-    - [With REST API](#with-rest-api)
-      - [Approximate KNN Search with AnnLite](#approximate-knn-search-with-annlite)
-    - [Production Ready Neural Search with HNSWPostgresIndexer](#production-ready-neural-search-with-hnswpostgresindexer)
-  - [Presentation](#presentation)
-  - [Demo](#demo)
-  - [Links](#links)
-  - [FAQ](#faq)
-    - [Why this dataset?](#why-this-dataset)
-    - [LFS quota is exceeded](#lfs-quota-is-exceeded)
-  - [Citation](#citation)
-  - [License](#license)
-
-<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
-
-<!-- /code_chunk_output -->
+https://user-images.githubusercontent.com/957840/227705344-27501a6f-1e0b-48c0-854d-62ebc8d3160d.mp4
 
 
-# LegalQA using SentenceKoBART
+
+
+<!-- vscode-markdown-toc -->
+* 1. [Setup](#Setup)
+* 2. [Approximate KNN Search with AnnLite](#ApproximateKNNSearchwithAnnLitehttps:github.comjina-aiannlite)
+	* 2.1. [Index](#Index)
+	* 2.2. [Query](#Query)
+		* 2.2.1. [Retrieval Augmented Response with OpenAI ChatGPT](#RetrievalAugmentedResponsewithOpenAIChatGPT)
+* 3. [Presentation](#Presentation)
+* 4. [Demo](#Demo)
+* 5. [Links](#Links)
+* 6. [FAQ](#FAQ)
+	* 6.1. [Why this dataset?](#Whythisdataset)
+	* 6.2. [LFS quota is exceeded](#LFSquotaisexceeded)
+* 7. [Citation](#Citation)
+* 8. [License](#License)
+
+<!-- vscode-markdown-toc-config
+	numbering=true
+	autoSave=true
+	/vscode-markdown-toc-config -->
+<!-- /vscode-markdown-toc -->
+
 
 Implementation of legal QA system based on Sentence[KoBART](https://github.com/SKT-AI/KoBART)
 
@@ -32,9 +35,10 @@ Implementation of legal QA system based on Sentence[KoBART](https://github.com/S
 - Based on Neural Search Engine [Jina](https://github.com/jina-ai/jina) v2.0
 - [Provide Korean legal QA data](data/legalqa.jsonlines)(1,830 pairs)
 - [Apply approximate KNN search](#approximate-knn-search) with [Faiss](https://github.com/facebookresearch/faiss), [Annoy](https://github.com/spotify/annoy), [Hnswlib](https://github.com/nmslib/hnswlib).
+- Retrieval Augmented Answer Generation with [OpenAI ChatGPT](https://openai.com/blog/chatgpt).
 
 
-## Setup
+##  1. <a name='Setup'></a>Setup
 
 ```bash
 # install git lfs , https://github.com/git-lfs/git-lfs/wiki/Installation
@@ -50,48 +54,10 @@ git lfs pull
 pip install -r requirements.txt
 ```
 
-## Index
 
+##  2. <a name='ApproximateKNNSearchwithAnnLitehttps:github.comjina-aiannlite'></a>Approximate KNN Search with [AnnLite](https://github.com/jina-ai/annlite)
 
-```sh
-python app.py -t index
-```
-
-![](data/index_numpy.svg)
-
-GPU-based indexing available as an option
-
-- `device: cuda`
-
-
-## Search
-
-### With REST API
-
-To start the Jina server for REST API:
-
-```sh
-# python app.py -t query_restful --flow flows/query_numpy.yml
-python app.py -t query_restful
-```
-
-![](data/query_numpy.svg)
-
-Then use a client to query:
-
-```sh
-curl --request POST -d '{"parameters": {"limit": 1},  "data": ["상속 관련 문의"]}' -H 'Content-Type: application/json' 'http://0.0.0.0:1234/search'
-````
-
-
-### From the terminal
-
-```sh
-# python app.py -t query --flow flows/query_numpy.yml
-python app.py -t query
-```
-
-#### Approximate KNN Search with [AnnLite](https://github.com/jina-ai/annlite)
+###  2.1. <a name='Index'></a>Index
 
 ```sh
 python app.py -t index --flow flows/index_annlite.yml
@@ -99,71 +65,63 @@ python app.py -t index --flow flows/index_annlite.yml
 
 ![](data/index_annlite.svg)
 
+GPU-based indexing available as an option
+
+- device: cuda
+
+###  2.2. <a name='Query'></a>Query
 
 ```sh
+# test on bash
 python app.py -t query --flow flows/query_annlite.yml
+# test on REST API
+python app.py -t query_restful --flow flows/query_annlite.yml
 ```
 
 ![](data/query_annlite.svg)
 
+####  2.2.1. <a name='RetrievalAugmentedResponsewithOpenAIChatGPT'></a>Retrieval Augmented Response with OpenAI ChatGPT
 
-- **Retrieval time**(sec.)
-  - AMD Ryzen 5 PRO 4650U, 16 GB Memory
-  - Average of 100 searches
-  - Excluding BertReRanker
-
-| top-k |  Numpy |  AnnLite |  Faiss  |  Annoy | 
-|:-----:|:------:|:----:|:-----:|:-----:|
-|   10  |   1.433 |  0.101  |  0.131 |  0.118  |
-
-### Production Ready Neural Search with [HNSWPostgresIndexer](https://hub.jina.ai/executor/dvp0845a)
-
+- Get OpenAI API from https://platform.openai.com/account/api-keys
 
 ```sh
-docker run -e POSTGRES_PASSWORD=123456 -p 127.0.0.1:5432:5432/tcp postgres:13.2
-python app.py -t index --flow flows/index_psqlhnsw.yml
+OPENAI_API_KEY=$OPENAI_KEY python app.py -t query --flow flows/query_annlite_openai.yml
 ```
 
-![](data/index_psqlhnsw.svg)
 
+![](data/query_restful.svg)
 
-```sh
-python app.py -t query --flow flows/query_psqlhnsw.yml
-```
-
-![](data/query_psqlhnsw.svg)
-
-## Presentation
+##  3. <a name='Presentation'></a>Presentation
 
 - [Neural IR 101](http://tiny.one/neuralIR101)
 
 | ![](data/present.png)|
 | ------ |
 
-## Demo 
+##  4. <a name='Demo'></a>Demo 
 
 - Working!
 
 | ![](data/demo.gif)|
 | ------ |
 
-## Links
+##  5. <a name='Links'></a>Links
 
 - [[AI 모델 탐험기] #13 Neural Search를 이용하여 제작된 법률 QA 검색 시스템, Legal QA](https://medium.com/ai-networkkr/ai-%EB%AA%A8%EB%8D%B8-%ED%83%90%ED%97%98%EA%B8%B0-13-neural-search%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%98%EC%97%AC-%EC%A0%9C%EC%9E%91%EB%90%9C-%EB%B2%95%EB%A5%A0-qa-%EA%B2%80%EC%83%89-%EC%8B%9C%EC%8A%A4%ED%85%9C-legal-qa-a0a6a1eb35bf)
 
-## FAQ
+##  6. <a name='FAQ'></a>FAQ
 
-### Why this dataset?
+###  6.1. <a name='Whythisdataset'></a>Why this dataset?
 
 Legal data is composed of technical terms, so it is difficult to search if you are not familiar with these terms. Because of these characteristics, I thought it was a good example to show the effectiveness of neural IR.
 
-### LFS quota is exceeded
+###  6.2. <a name='LFSquotaisexceeded'></a>LFS quota is exceeded
 
 You can download `SentenceKoBART.bin` from one of the two links below.
 
 - https://drive.google.com/file/d/1DJFMknxT7OAAWYFV_WGW2UcCxmuf3cp_/view?usp=sharing
 
-## Citation
+##  7. <a name='Citation'></a>Citation
 
 Model training, data crawling, and demo system were all supported by the **AWS Hero** program.
 
@@ -177,7 +135,7 @@ howpublished = {\url{https://github.com/haven-jeon/LegalQA}}
 ```
 
 
-## License
+##  8. <a name='License'></a>License
 
 - QA data `data/legalqa.jsonlines` is crawled in [www.freelawfirm.co.kr](http://www.freelawfirm.co.kr/lawqnainfo) based on `robots.txt`. Commercial use other than academic use is prohibited.
 - We are not responsible for any legal decisions we make based on the resources provided here.
